@@ -1,9 +1,9 @@
-import "./index.css";
+import { RouterProvider } from "react-router-dom";
+import { router } from "./routes";
+import "../styles/globals.css";
 
 export function App() {
-  return (
-    <h1>Mantap</h1>
-  );
+  return <RouterProvider router={router} />;
 }
 
 export default App;

@@ -1,14 +1,17 @@
 import { useMemo } from "react";
 import { TrendingUp, TrendingDown, Eye, EyeOff } from "lucide-react";
-import { useState } from "react";
 import { useWalletStore } from "@/stores/walletStore";
 import { useTransactionStore } from "@/stores/transactionStore";
 import { formatCurrency } from "@/lib/utils";
 
-export default function SummaryCard() {
+interface SummaryCardProps {
+  isHidden: boolean;
+  onHiddenChange: (isHidden: boolean) => void;
+}
+
+export default function SummaryCard({ isHidden, onHiddenChange }: SummaryCardProps) {
   const wallets = useWalletStore((s) => s.wallets);
   const transactions = useTransactionStore((s) => s.transactions);
-  const [hidden, setHidden] = useState(false);
 
   const totalBalance = useMemo(
     () => wallets.reduce((sum, w) => sum + w.balance, 0),
@@ -37,7 +40,7 @@ export default function SummaryCard() {
     : 0;
 
   return (
-    <div className="hero-card noise-overlay rounded-2xl p-5 text-white shadow-xl shadow-primary/20 animate-[slide-up_0.4s_ease-out]">
+    <div className="hero-card noise-overlay rounded-2xl p-5 text-white shadow-[0_4px_16px_rgba(0,0,0,0.35)] animate-[slide-up_0.4s_ease-out]">
       {/* Header */}
       <div className="flex items-start justify-between mb-5">
         <div>
@@ -46,17 +49,17 @@ export default function SummaryCard() {
         </div>
         <button
           type="button"
-          onClick={() => setHidden((h) => !h)}
+          onClick={() => onHiddenChange(!isHidden)}
           className="flex items-center justify-center h-8 w-8 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
-          aria-label={hidden ? "Tampilkan saldo" : "Sembunyikan saldo"}
+          aria-label={isHidden ? "Tampilkan saldo" : "Sembunyikan saldo"}
         >
-          {hidden ? <EyeOff className="h-3.5 w-3.5 text-white/70" /> : <Eye className="h-3.5 w-3.5 text-white/70" />}
+          {isHidden ? <EyeOff className="h-3.5 w-3.5 text-white/70" /> : <Eye className="h-3.5 w-3.5 text-white/70" />}
         </button>
       </div>
 
       {/* Balance */}
       <div className="mb-5">
-        {hidden ? (
+        {isHidden ? (
           <div className="flex items-center gap-1.5">
             {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="h-3 w-3 rounded-full bg-white/30" />
@@ -81,7 +84,7 @@ export default function SummaryCard() {
           <div>
             <p className="text-[10px] text-white/50 uppercase tracking-wider">Pemasukan</p>
             <p className="text-sm font-semibold text-emerald-300">
-              {hidden ? "••••" : formatCurrency(monthSummary.income)}
+              {isHidden ? "••••" : formatCurrency(monthSummary.income)}
             </p>
           </div>
         </div>
@@ -92,7 +95,7 @@ export default function SummaryCard() {
           <div>
             <p className="text-[10px] text-white/50 uppercase tracking-wider">Pengeluaran</p>
             <p className="text-sm font-semibold text-red-300">
-              {hidden ? "••••" : formatCurrency(monthSummary.expense)}
+              {isHidden ? "••••" : formatCurrency(monthSummary.expense)}
             </p>
           </div>
         </div>
@@ -105,7 +108,7 @@ export default function SummaryCard() {
             <p className="text-[10px] text-white/40 uppercase tracking-wider">Tabungan bulan ini</p>
             <p className="text-[10px] font-semibold text-white/60">{savingsRate}%</p>
           </div>
-          <div className="h-1 w-full rounded-full bg-white/10 overflow-hidden">
+          <div className="h-1 w-full rounded-full bg-white/10 overflow-isHidden">
             <div
               className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-teal-300 transition-all duration-700"
               style={{ width: `${Math.max(0, Math.min(100, savingsRate))}%` }}

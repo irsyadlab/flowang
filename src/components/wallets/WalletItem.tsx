@@ -8,9 +8,10 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 
 interface WalletItemProps {
   wallet: WalletType;
+  isHidden?: boolean;
 }
 
-export default function WalletItem({ wallet }: WalletItemProps) {
+export default function WalletItem({ wallet, isHidden = false }: WalletItemProps) {
   const navigate = useNavigate();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const deleteWallet = useWalletStore((s) => s.deleteWallet);
@@ -43,7 +44,17 @@ export default function WalletItem({ wallet }: WalletItemProps) {
         {/* Info */}
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-foreground">{wallet.name}</p>
-          <p className="text-sm font-medium text-muted-foreground tabular-nums">{formatCurrency(wallet.balance)}</p>
+          <p className="text-sm font-medium text-muted-foreground tabular-nums">
+            {isHidden ? (
+              <span className="flex items-center gap-0.5 mt-0.5">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <span key={i} className="inline-block h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
+                ))}
+              </span>
+            ) : (
+              formatCurrency(wallet.balance)
+            )}
+          </p>
         </div>
 
         {/* Actions */}

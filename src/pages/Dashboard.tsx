@@ -7,11 +7,13 @@ import SummaryCard from "@/components/dashboard/SummaryCard";
 import WalletList from "@/components/dashboard/WalletList";
 import RecentTransactions from "@/components/dashboard/RecentTransactions";
 import LoadingSpinner from "@/components/shared/LoadingSpinner";
+import { useBalanceVisibility } from "@/hooks/useBalanceVisibility";
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const { isLoading: walletLoading, loadWallets } = useWalletStore();
   const { isLoading: txLoading, loadTransactions } = useTransactionStore();
+  const { isHidden, setIsHidden } = useBalanceVisibility();
 
   useEffect(() => {
     loadWallets();
@@ -40,8 +42,8 @@ export default function Dashboard() {
         </button>
       </div>
 
-      <SummaryCard />
-      <WalletList />
+      <SummaryCard isHidden={isHidden} onHiddenChange={setIsHidden} />
+      <WalletList isHidden={isHidden} />
       <RecentTransactions />
     </div>
   );

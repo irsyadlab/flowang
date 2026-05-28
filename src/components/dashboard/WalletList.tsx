@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Wallet, ChevronRight, Plus } from "lucide-react";
 import { useWalletStore } from "@/stores/walletStore";
@@ -12,9 +13,51 @@ const WALLET_GRADIENTS = [
   "wallet-card-5",
 ];
 
-export default function WalletList() {
+interface WalletListProps {
+  isHidden?: boolean;
+}
+
+export default function WalletList({ isHidden = false }: WalletListProps) {
   const navigate = useNavigate();
   const wallets = useWalletStore((s) => s.wallets);
+
+  // Drag scroll state
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const dragState = useRef({ isDragging: false, startX: 0, scrollLeft: 0, moved: false });
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    dragState.current = { isDragging: true, startX: e.clientX, scrollLeft: el.scrollLeft, moved: false };
+    el.setPointerCapture(e.pointerId);
+    el.style.cursor = "grabbing";
+    el.style.userSelect = "none";
+  };
+
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!dragState.current.isDragging) return;
+    const el = scrollRef.current;
+    if (!el) return;
+    const dx = e.clientX - dragState.current.startX;
+    if (Math.abs(dx) > 4) dragState.current.moved = true;
+    el.scrollLeft = dragState.current.scrollLeft - dx;
+  };
+
+  const onPointerUp = (_e: React.PointerEvent) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    dragState.current.isDragging = false;
+    el.style.cursor = "";
+    el.style.userSelect = "";
+  };
+
+  // Prevent click from firing after drag
+  const onClickCapture = (e: React.MouseEvent) => {
+    if (dragState.current.moved) {
+      e.stopPropagation();
+      dragState.current.moved = false;
+    }
+  };
 
   if (wallets.length === 0) {
     return (
@@ -43,8 +86,17 @@ export default function WalletList() {
         </button>
       </div>
 
-      {/* Horizontal scroll for wallet cards */}
-      <div className="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4 snap-x snap-mandatory scrollbar-none" style={{ scrollbarWidth: 'none' }}>
+      {/* Draggable horizontal scroll */}
+      <div
+        ref={scrollRef}
+        className="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4 snap-x snap-mandatory select-none"
+        style={{ scrollbarWidth: "none", cursor: "grab" }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+        onClickCapture={onClickCapture}
+      >
         {wallets.map((w, i) => (
           <button
             key={w.id}
@@ -52,7 +104,7 @@ export default function WalletList() {
             onClick={() => navigate(`/wallets/${w.id}/detail`)}
             className={`${WALLET_GRADIENTS[i % WALLET_GRADIENTS.length]} relative shrink-0 snap-start w-[200px] rounded-2xl p-4 text-left text-white shadow-lg transition-transform duration-200 active:scale-95 hover:scale-[1.02] overflow-hidden`}
           >
-            {/* Decorative circle */}
+            {/* Decorative circles */}
             <div className="absolute -top-6 -right-6 h-24 w-24 rounded-full bg-white/5" />
             <div className="absolute -bottom-4 -right-2 h-16 w-16 rounded-full bg-white/5" />
 
@@ -64,7 +116,15 @@ export default function WalletList() {
                 <ChevronRight className="h-4 w-4 text-white/40" />
               </div>
               <p className="text-[10px] text-white/50 uppercase tracking-widest mb-0.5">Saldo</p>
-              <p className="text-base font-bold leading-tight truncate">{formatCurrency(w.balance)}</p>
+              {isHidden ? (
+                <div className="flex items-center gap-1 mt-1 mb-1">
+                  {Array.from({ length: 5 }).map((_, j) => (
+                    <div key={j} className="h-2 w-2 rounded-full bg-white/40" />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-base font-bold leading-tight truncate">{formatCurrency(w.balance)}</p>
+              )}
               <p className="mt-1.5 text-xs text-white/60 truncate font-medium">{w.name}</p>
             </div>
           </button>

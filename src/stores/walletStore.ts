@@ -109,7 +109,7 @@ export const useWalletStore = create<WalletState & WalletActions>((set, get) => 
       );
       
       if (hasTransactions) {
-        throw new Error('Cannot delete wallet with existing transactions');
+        throw new Error('Wallet tidak dapat dihapus karena masih memiliki transaksi');
       }
       
       await walletDb.deleteWallet(db, id);

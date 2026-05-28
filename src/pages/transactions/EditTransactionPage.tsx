@@ -1,0 +1,63 @@
+import { useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { useTransactionStore } from "@/stores/transactionStore";
+import TransactionForm from "@/components/transactions/TransactionForm";
+import ErrorMessage from "@/components/shared/ErrorMessage";
+import LoadingSpinner from "@/components/shared/LoadingSpinner";
+import type { TransactionInput } from "@/lib/validators";
+
+export default function EditTransactionPage() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { transactions, isLoading, loadTransactions, updateTransaction } = useTransactionStore();
+
+  useEffect(() => {
+    if (transactions.length === 0) loadTransactions();
+  }, [transactions.length, loadTransactions]);
+
+  const transaction = transactions.find((t) => t.id === id);
+
+  if (isLoading && transactions.length === 0) {
+    return <LoadingSpinner fullscreen />;
+  }
+
+  if (!transaction) {
+    return (
+      <div className="flex flex-col gap-4 p-4">
+        <ErrorMessage message="Transaksi tidak ditemukan" />
+      </div>
+    );
+  }
+
+  const handleSubmit = async (data: TransactionInput) => {
+    await updateTransaction(transaction.id, {
+      type: data.type,
+      amount: data.amount,
+      walletId: data.walletId,
+      toWalletId: data.toWalletId || undefined,
+      categoryId: data.categoryId || undefined,
+      date: data.date,
+      note: data.note || undefined,
+    });
+    navigate("/transactions");
+  };
+
+  return (
+    <div className="flex flex-col gap-4 p-4">
+      <h1 className="text-lg font-semibold">Edit Transaksi</h1>
+      <TransactionForm
+        initialData={{
+          type: transaction.type,
+          amount: transaction.amount,
+          walletId: transaction.walletId,
+          toWalletId: transaction.toWalletId ?? "",
+          categoryId: transaction.categoryId ?? "",
+          date: transaction.date,
+          note: transaction.note ?? "",
+        }}
+        onSubmit={handleSubmit}
+        submitLabel="Simpan Perubahan"
+      />
+    </div>
+  );
+}

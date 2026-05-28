@@ -103,7 +103,7 @@ export const useCategoryStore = create<CategoryState & CategoryActions>((set, ge
       
       // Check if category is default
       if (category.isDefault) {
-        throw new Error('Cannot delete default category');
+        throw new Error('Kategori default tidak dapat dihapus');
       }
       
       // Check if category is used by any transactions
@@ -111,7 +111,7 @@ export const useCategoryStore = create<CategoryState & CategoryActions>((set, ge
       const hasTransactions = allTransactions.some((t) => t.categoryId === id);
       
       if (hasTransactions) {
-        throw new Error('Cannot delete category with existing transactions');
+        throw new Error('Kategori masih digunakan');
       }
       
       await categoryDb.deleteCategory(db, id);

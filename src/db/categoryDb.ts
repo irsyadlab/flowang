@@ -1,4 +1,5 @@
 import type { Category } from '../types';
+import { localISOString } from '../lib/utils';
 
 // Helper: wrap IDBRequest to Promise
 function requestToPromise<T>(request: IDBRequest<T>): Promise<T> {
@@ -72,7 +73,7 @@ export async function seedDefaultCategories(db: IDBDatabase): Promise<void> {
   const existing = await getAllCategories(db);
   if (existing.length > 0) return; // Already seeded
 
-  const now = new Date().toISOString();
+  const now = localISOString();
   for (const cat of DEFAULT_CATEGORIES) {
     const category: Category = {
       ...cat,

@@ -7,10 +7,11 @@ import { useCategoryStore } from "@/stores/categoryStore";
 import TransactionFilter from "@/components/transactions/TransactionFilter";
 import TransactionList from "@/components/transactions/TransactionList";
 import LoadingSpinner from "@/components/shared/LoadingSpinner";
+import { localDateStr } from "@/lib/utils";
 
 export default function TransactionsPage() {
   const navigate = useNavigate();
-  const { isLoading: txLoading, loadTransactions } = useTransactionStore();
+  const { isLoading: txLoading, loadTransactions, setFilter } = useTransactionStore();
   const { loadWallets } = useWalletStore();
   const { loadCategories } = useCategoryStore();
 
@@ -19,6 +20,12 @@ export default function TransactionsPage() {
     loadWallets();
     loadCategories();
   }, [loadTransactions, loadWallets, loadCategories]);
+
+  // Always set date filter to today on mount
+  useEffect(() => {
+    const t = localDateStr();
+    setFilter({ dateFrom: t, dateTo: t });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (txLoading) {
     return <LoadingSpinner fullscreen />;

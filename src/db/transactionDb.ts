@@ -1,4 +1,5 @@
 import type { Transaction } from '../types';
+import { localISOString } from '../lib/utils';
 
 interface WalletUpdate {
   walletId: string;
@@ -87,7 +88,7 @@ export async function addTransaction(
         const wallet = getReq.result;
         if (wallet) {
           wallet.balance = (wallet.balance || 0) + delta;
-          wallet.updatedAt = new Date().toISOString();
+          wallet.updatedAt = localISOString();
           walletStore.put(wallet);
         }
       };
@@ -121,7 +122,7 @@ export async function updateTransaction(
         const wallet = getReq.result;
         if (wallet) {
           wallet.balance = (wallet.balance || 0) + delta;
-          wallet.updatedAt = new Date().toISOString();
+          wallet.updatedAt = localISOString();
           walletStore.put(wallet);
         }
       };
@@ -154,7 +155,7 @@ export async function deleteTransaction(
         const wallet = getReq.result;
         if (wallet) {
           wallet.balance = (wallet.balance || 0) + delta;
-          wallet.updatedAt = new Date().toISOString();
+          wallet.updatedAt = localISOString();
           walletStore.put(wallet);
         }
       };

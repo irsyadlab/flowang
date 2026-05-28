@@ -6,6 +6,7 @@ import { getAllTransactions, addTransactionWithWalletUpdate } from '../db/transa
 import { useUIStore } from './uiStore';
 import { useSyncStore } from '../sync/syncStore';
 import { onLocalChange } from '../sync/syncManager';
+import { localDateStr, localISOString } from '../lib/utils';
 
 interface WalletState {
   wallets: Wallet[];
@@ -49,7 +50,7 @@ export const useWalletStore = create<WalletState & WalletActions>((set, get) => 
       const db = getDB();
       if (!db) throw new Error('Database not initialized');
       
-      const now = new Date().toISOString();
+      const now = localISOString();
       const wallet: Wallet = {
         id: crypto.randomUUID(),
         name: data.name,
@@ -90,8 +91,8 @@ export const useWalletStore = create<WalletState & WalletActions>((set, get) => 
         const oldBalance = existing.initialBalance;
         const newBalance = data.initialBalance!;
         const delta = newBalance - oldBalance;
-        const today = new Date().toISOString().split('T')[0];
-        const now = new Date().toISOString();
+        const today = localDateStr();
+        const now = localISOString();
         
         const correctionTx: Transaction = {
           id: crypto.randomUUID(),
@@ -134,7 +135,7 @@ export const useWalletStore = create<WalletState & WalletActions>((set, get) => 
         const updated: Wallet = {
           ...existing,
           ...data,
-          updatedAt: new Date().toISOString(),
+          updatedAt: localISOString(),
         };
         
         await walletDb.updateWallet(db, updated);
@@ -218,7 +219,7 @@ export const useWalletStore = create<WalletState & WalletActions>((set, get) => 
       const updated: Wallet = {
         ...wallet,
         balance: newBalance,
-        updatedAt: new Date().toISOString(),
+        updatedAt: localISOString(),
       };
       
       await walletDb.updateWallet(db, updated);

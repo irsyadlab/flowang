@@ -1,44 +1,122 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTransactionStore } from "@/stores/transactionStore";
 import { useWalletStore } from "@/stores/walletStore";
 import { useCategoryStore } from "@/stores/categoryStore";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { SlidersHorizontal, RotateCcw, ChevronDown } from "lucide-react";
+import { SlidersHorizontal, RotateCcw, ChevronLeft, ChevronRight } from "lucide-react";
+import { localDateStr } from "@/lib/utils";
+
+/** Format YYYY-MM-DD to "28 Mei 2026" */
+function formatDate(ymd: string): string {
+  const [y, m, d] = ymd.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+/** Get today as YYYY-MM-DD in local time */
+function today(): string {
+  return localDateStr();
+}
+
+/** Shift a YYYY-MM-DD by delta days */
+function shiftDay(ymd: string, delta: number): string {
+  const [y, m, d] = ymd.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  date.setDate(date.getDate() + delta);
+  return localDateStr(date);
+}
 
 export default function TransactionFilter() {
-  const { filter, setFilter, clearFilter } = useTransactionStore();
+  const { filter, setFilter } = useTransactionStore();
   const wallets = useWalletStore((s) => s.wallets);
   const categories = useCategoryStore((s) => s.categories);
-  const [expanded, setExpanded] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
 
-  const hasFilter = filter.walletId || filter.categoryId || filter.type || filter.dateFrom || filter.dateTo;
-  const activeCount = [filter.walletId, filter.categoryId, filter.type, filter.dateFrom || filter.dateTo]
-    .filter(Boolean).length;
+  const dateInputRef = useRef<HTMLInputElement>(null);
+
+  // Active date — derived from filter.dateFrom, fallback to today
+  const activeDate = filter.dateFrom ?? today();
+
+  const applyDate = (ymd: string) => {
+    setFilter({ dateFrom: ymd, dateTo: ymd });
+  };
+
+  const hasExtraFilter = filter.walletId || filter.categoryId || filter.type;
+  const extraCount = [filter.walletId, filter.categoryId, filter.type].filter(Boolean).length;
 
   return (
-    <div className="rounded-2xl border border-border bg-card overflow-hidden">
-      {/* Filter toggle header */}
-      <button
-        type="button"
-        onClick={() => setExpanded((e) => !e)}
-        className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium transition-colors hover:bg-accent/50"
-      >
-        <div className="flex items-center gap-2">
-          <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
-          <span>Filter</span>
-          {activeCount > 0 && (
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-              {activeCount}
+    <div className="space-y-2">
+      {/* Top bar: date navigator (left) + filter button (right) */}
+      <div className="flex items-center justify-between gap-2">
+
+        {/* Date navigator */}
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => applyDate(shiftDay(activeDate, -1))}
+            className="flex h-8 w-8 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors hover:bg-muted"
+            aria-label="Hari sebelumnya"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+
+          {/* Date label — click opens native date picker */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => dateInputRef.current?.showPicker?.()}
+              className="flex h-8 items-center gap-1 rounded-xl border border-border bg-card px-3 text-sm font-medium transition-colors hover:bg-muted"
+            >
+              {formatDate(activeDate)}
+            </button>
+            <input
+              ref={dateInputRef}
+              type="date"
+              value={activeDate}
+              onChange={(e) => e.target.value && applyDate(e.target.value)}
+              className="pointer-events-none absolute inset-0 h-full w-full opacity-0"
+              tabIndex={-1}
+              aria-hidden
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => applyDate(shiftDay(activeDate, 1))}
+            className="flex h-8 w-8 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors hover:bg-muted"
+            aria-label="Hari berikutnya"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Filter toggle button */}
+        <button
+          type="button"
+          onClick={() => setFilterOpen((o) => !o)}
+          className={`relative flex h-8 items-center gap-1.5 rounded-xl border px-3 text-xs font-medium transition-colors ${
+            filterOpen || hasExtraFilter
+              ? "border-primary/40 bg-primary/10 text-primary"
+              : "border-border bg-card text-muted-foreground hover:bg-muted"
+          }`}
+        >
+          <SlidersHorizontal className="h-3.5 w-3.5" />
+          Filter
+          {extraCount > 0 && (
+            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
+              {extraCount}
             </span>
           )}
-        </div>
-        <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${expanded ? "rotate-180" : ""}`} />
-      </button>
+        </button>
+      </div>
 
-      {/* Filter content */}
-      {expanded && (
-        <div className="border-t border-border px-4 pb-4 pt-3 space-y-3">
+      {/* Expandable filter panel */}
+      {filterOpen && (
+        <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <Select
               value={filter.walletId ?? ""}
@@ -71,7 +149,9 @@ export default function TransactionFilter() {
 
           <Select
             value={filter.type ?? ""}
-            onValueChange={(v) => setFilter({ type: (v || undefined) as "income" | "expense" | "transfer" | undefined })}
+            onValueChange={(v) =>
+              setFilter({ type: (v || undefined) as "income" | "expense" | "transfer" | undefined })
+            }
           >
             <SelectTrigger className="rounded-xl h-9 text-xs">
               <SelectValue placeholder="Semua Tipe" />
@@ -83,29 +163,13 @@ export default function TransactionFilter() {
             </SelectContent>
           </Select>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Dari Tanggal</label>
-              <input
-                type="date"
-                value={filter.dateFrom ?? ""}
-                onChange={(e) => setFilter({ dateFrom: e.target.value || undefined })}
-                className="flex h-9 w-full rounded-xl border border-input bg-transparent px-3 py-1 text-xs shadow-xs transition-[color,box-shadow] focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-ring/50"
-              />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Sampai Tanggal</label>
-              <input
-                type="date"
-                value={filter.dateTo ?? ""}
-                onChange={(e) => setFilter({ dateTo: e.target.value || undefined })}
-                className="flex h-9 w-full rounded-xl border border-input bg-transparent px-3 py-1 text-xs shadow-xs transition-[color,box-shadow] focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-ring/50"
-              />
-            </div>
-          </div>
-
-          {hasFilter && (
-            <Button variant="ghost" size="sm" onClick={clearFilter} className="w-full gap-1.5 rounded-xl text-xs">
+          {hasExtraFilter && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setFilter({ walletId: undefined, categoryId: undefined, type: undefined })}
+              className="w-full gap-1.5 rounded-xl text-xs"
+            >
               <RotateCcw className="h-3.5 w-3.5" />
               Reset Filter
             </Button>

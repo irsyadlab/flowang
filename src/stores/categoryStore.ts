@@ -6,6 +6,7 @@ import { getAllTransactions } from '../db/transactionDb';
 import { useUIStore } from './uiStore';
 import { useSyncStore } from '../sync/syncStore';
 import { onLocalChange } from '../sync/syncManager';
+import { localISOString } from '../lib/utils';
 
 interface CategoryState {
   categories: Category[];
@@ -53,7 +54,7 @@ export const useCategoryStore = create<CategoryState & CategoryActions>((set, ge
         name: data.name,
         type: data.type,
         isDefault: data.isDefault ?? false,
-        createdAt: new Date().toISOString(),
+        createdAt: localISOString(),
       };
       
       await categoryDb.addCategory(db, category);

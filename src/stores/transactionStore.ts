@@ -6,6 +6,7 @@ import { useUIStore } from './uiStore';
 import { useWalletStore } from './walletStore';
 import { useSyncStore } from '../sync/syncStore';
 import { onLocalChange } from '../sync/syncManager';
+import { localISOString } from '../lib/utils';
 
 interface TransactionState {
   transactions: Transaction[];
@@ -91,7 +92,7 @@ export const useTransactionStore = create<TransactionState & TransactionActions>
       const db = getDB();
       if (!db) throw new Error('Database not initialized');
       
-      const now = new Date().toISOString();
+      const now = localISOString();
       const transaction: Transaction = {
         id: crypto.randomUUID(),
         type: data.type,
@@ -138,7 +139,7 @@ export const useTransactionStore = create<TransactionState & TransactionActions>
       const updated: Transaction = {
         ...existing,
         ...data,
-        updatedAt: new Date().toISOString(),
+        updatedAt: localISOString(),
       };
       
       const walletUpdates = calculateWalletUpdates(updated, existing);

@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTransactionStore } from "@/stores/transactionStore";
 import TransactionForm from "@/components/transactions/TransactionForm";
 import type { TransactionInput } from "@/lib/validators";
+import { localDateStr } from "@/lib/utils";
 
 export default function NewTransactionPage() {
   const navigate = useNavigate();
@@ -11,7 +12,7 @@ export default function NewTransactionPage() {
 
   const walletId = searchParams.get("walletId") || undefined;
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = localDateStr();
 
   const initialData = walletId
     ? {

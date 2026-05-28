@@ -5,12 +5,6 @@ import type { Category } from "@/types";
 import { useCategoryStore } from "@/stores/categoryStore";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 
-const TYPE_CONFIG = {
-  income: { label: "Pemasukan", className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" },
-  expense: { label: "Pengeluaran", className: "bg-red-500/10 text-red-700 dark:text-red-400" },
-  both: { label: "Keduanya", className: "bg-blue-500/10 text-blue-700 dark:text-blue-400" },
-};
-
 interface CategoryItemProps {
   category: Category;
 }
@@ -21,8 +15,6 @@ export default function CategoryItem({ category }: CategoryItemProps) {
   const deleteCategory = useCategoryStore((s) => s.deleteCategory);
   const error = useCategoryStore((s) => s.error);
 
-  const config = TYPE_CONFIG[category.type];
-
   const handleDelete = async () => {
     await deleteCategory(category.id);
     setConfirmOpen(false);
@@ -30,20 +22,19 @@ export default function CategoryItem({ category }: CategoryItemProps) {
 
   return (
     <>
-      <div className="group flex items-center gap-3 rounded-2xl border border-border/60 bg-card px-4 py-3 transition-all duration-200 hover:border-border hover:shadow-sm">
-        <div className="min-w-0 flex-1 flex items-center gap-2.5">
-          <p className="truncate text-sm font-medium text-foreground">{category.name}</p>
-          <span className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${config.className}`}>
-            {config.label}
-          </span>
-          {category.isDefault && (
-            <span className="shrink-0 flex items-center gap-1 rounded-md border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">
-              <Lock className="h-2.5 w-2.5" />
-              Default
-            </span>
-          )}
+      <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-card px-4 py-3 transition-all duration-200 hover:border-border hover:shadow-sm">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <p className="truncate text-sm font-medium text-foreground">{category.name}</p>
+            {category.isDefault && (
+              <span className="shrink-0 flex items-center gap-1 rounded-md border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                <Lock className="h-2.5 w-2.5" />
+                Default
+              </span>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={() => navigate(`/categories/${category.id}`)}

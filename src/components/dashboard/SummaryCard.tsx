@@ -3,6 +3,7 @@ import { TrendingUp, TrendingDown, Eye, EyeOff } from "lucide-react";
 import { useWalletStore } from "@/stores/walletStore";
 import { useTransactionStore } from "@/stores/transactionStore";
 import { formatCurrency } from "@/lib/utils";
+import { localDateStr } from "@/lib/utils";
 
 interface SummaryCardProps {
   isHidden: boolean;
@@ -20,7 +21,7 @@ export default function SummaryCard({ isHidden, onHiddenChange }: SummaryCardPro
 
   const now = new Date();
   const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
-  const today = now.toISOString().split("T")[0];
+  const today = localDateStr(now);
   const monthName = now.toLocaleDateString("id-ID", { month: "long", year: "numeric" });
 
   const monthSummary = useMemo(() => {

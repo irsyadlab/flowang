@@ -13,6 +13,7 @@ import {
   ChevronRight,
   Monitor,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useSync } from '@/hooks/useSync';
 import { useTheme } from '@/hooks/useTheme';
 import { useSyncStore } from '@/sync/syncStore';
@@ -53,16 +54,18 @@ export default function SettingsPage() {
     }
   }
 
-  // Generate sync key if none exists
+  // Generate sync key if none exists — run once on mount only.
+  // We read syncKey via getState() to avoid re-running when the key changes
+  // (e.g. after scanning a QR code), which would cause unnecessary re-renders.
   useEffect(() => {
-    if (syncKey) return;
+    if (useSyncStore.getState().syncKey) return;
     const generate = async () => {
       const payload = await generateSyncKey();
       const encoded = encodeSyncKey(payload);
       useSyncStore.getState().setSyncKey(encoded);
     };
     generate();
-  }, [syncKey]);
+  }, []);
 
   const handleConnect = async () => {
     setConnecting(true);
@@ -102,17 +105,19 @@ export default function SettingsPage() {
   // Sync status badge
   const syncBadge = (() => {
     if (syncStatus === 'connected') {
+      if (peerCount > 0) {
+        return (
+          <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+            <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+            <Monitor className="h-3 w-3" />
+            {peerCount} perangkat terhubung
+          </span>
+        );
+      }
       return (
-        <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
-          <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
-          {peerCount > 0 ? (
-            <span className="flex items-center gap-0.5">
-              <Monitor className="h-3 w-3" />
-              {peerCount} perangkat terhubung
-            </span>
-          ) : (
-            'Siap Sinkronisasi'
-          )}
+        <span className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400">
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500" />
+          Menunggu perangkat lain...
         </span>
       );
     }
@@ -247,7 +252,14 @@ export default function SettingsPage() {
         title="Sync Key"
         description="Scan QR Code atau salin key untuk menghubungkan perangkat lain"
       >
-        <SyncKeyCard />
+        <SyncKeyCard
+          onConnected={() => {
+            setOpenSheet(null);
+            toast.success('Berhasil terhubung', {
+              description: 'Perangkat ini sekarang tersinkronisasi.',
+            });
+          }}
+        />
       </ResponsiveSheet>
 
       <ResponsiveSheet

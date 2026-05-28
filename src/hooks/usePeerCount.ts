@@ -25,13 +25,19 @@ export function usePeerCount(): number {
       setPeerCount(count);
     };
 
-    // Set initial count
+    // Set initial count — peers that announced before this hook subscribed
     update();
 
     awareness.on('change', update);
+
+    // y-webrtc also emits 'peers' on the provider itself when the peer list
+    // changes (separate from awareness). Subscribe to both so we don't miss
+    // peers that connected just before the awareness listener was attached.
+    provider.on('peers', update);
+
     return () => {
       awareness.off('change', update);
-      // Reset count when disconnecting
+      provider.off('peers', update);
       setPeerCount(0);
     };
   }, [syncStatus]);

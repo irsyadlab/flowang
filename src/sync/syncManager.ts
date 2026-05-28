@@ -6,10 +6,12 @@ import { useSyncStore } from './syncStore';
 import { importKeyFromBase64 } from './cryptoService';
 import { decodeSyncKey } from './syncKeyUtils';
 import * as webrtcProvider from './webrtcProvider';
+import { YJS_STORE } from './webrtcProvider';
 import * as googleDriveProvider from './googleDriveProvider';
 import { getDB } from '../db/db';
 import * as walletDb from '../db/walletDb';
-import type { Wallet, Transaction } from '../types';
+import * as categoryDb from '../db/categoryDb';
+import type { Wallet, Transaction, Category } from '../types';
 
 interface SyncEntity {
   id: string;
@@ -75,6 +77,7 @@ function _attachObservers(): void {
 
   const walletsMap = ydoc.getMap<Wallet | { id: string; _deleted: true }>('wallets');
   const transactionsMap = ydoc.getMap<Transaction | { id: string; _deleted: true }>('transactions');
+  const categoriesMap = ydoc.getMap<Category | { id: string; _deleted: true }>('categories');
 
   const handleWalletsChange = async () => {
     const db = getDB();
@@ -85,8 +88,19 @@ function _attachObservers(): void {
       if ((entry as SyncEntity)._deleted) {
         await walletDb.deleteWallet(db, entry.id).catch(() => {});
       } else {
-        // put() acts as upsert — safe to call for both new and existing
-        await walletDb.updateWallet(db, entry as Wallet).catch(() => {});
+        const incoming = entry as Wallet;
+        // `balance` is a derived value (initialBalance + sum of transactions).
+        // Never overwrite it with the remote snapshot — the remote device may
+        // have a different transaction history at the time it wrote to Yjs.
+        // Instead, preserve the local balance if the wallet already exists, or
+        // use initialBalance for a brand-new wallet (transactions haven't
+        // arrived yet; handleTransactionsChange will recalculate after they do).
+        const existing = await walletDb.getWalletById(db, incoming.id).catch(() => undefined);
+        const walletToSave: Wallet = {
+          ...incoming,
+          balance: existing ? existing.balance : incoming.initialBalance,
+        };
+        await walletDb.updateWallet(db, walletToSave).catch(() => {});
       }
     }
 
@@ -99,11 +113,12 @@ function _attachObservers(): void {
     const db = getDB();
     if (!db) return;
 
+    // Track which wallets are affected so we can recalculate their balances
+    const affectedWalletIds = new Set<string>();
+
     const entries = Array.from(transactionsMap.values());
     for (const entry of entries) {
       if ((entry as SyncEntity)._deleted) {
-        // For deleted transactions, we skip wallet balance recalc here —
-        // a full reload handles consistency
         const tx = db.transaction('transactions', 'readwrite');
         tx.objectStore('transactions').delete(entry.id);
         await new Promise<void>((res, rej) => {
@@ -111,11 +126,42 @@ function _attachObservers(): void {
           tx.onerror = () => rej(tx.error);
         }).catch(() => {});
       } else {
+        const incoming = entry as Transaction;
+        if (incoming.walletId) affectedWalletIds.add(incoming.walletId);
+        if (incoming.toWalletId) affectedWalletIds.add(incoming.toWalletId);
+
         const tx = db.transaction('transactions', 'readwrite');
-        tx.objectStore('transactions').put(entry as Transaction);
+        tx.objectStore('transactions').put(incoming);
         await new Promise<void>((res, rej) => {
           tx.oncomplete = () => res();
           tx.onerror = () => rej(tx.error);
+        }).catch(() => {});
+      }
+    }
+
+    // Recalculate balance for every affected wallet from the full transaction
+    // history — this is the only correct way since balance is a derived value.
+    if (affectedWalletIds.size > 0) {
+      const { getAllTransactions } = await import('../db/transactionDb');
+      const allTxs = await getAllTransactions(db);
+
+      for (const walletId of Array.from(affectedWalletIds)) {
+        const wallet = await walletDb.getWalletById(db, walletId).catch(() => undefined);
+        if (!wallet) continue;
+
+        let delta = 0;
+        for (const t of allTxs) {
+          if (t.walletId === walletId) {
+            if (t.type === 'income' || t.type === 'adjustment_increase') delta += t.amount;
+            else if (t.type === 'expense' || t.type === 'adjustment_decrease') delta -= t.amount;
+            else if (t.type === 'transfer') delta -= t.amount;
+          }
+          if (t.toWalletId === walletId && t.type === 'transfer') delta += t.amount;
+        }
+
+        await walletDb.updateWallet(db, {
+          ...wallet,
+          balance: wallet.initialBalance + delta,
         }).catch(() => {});
       }
     }
@@ -129,12 +175,32 @@ function _attachObservers(): void {
     ]);
   };
 
+  const handleCategoriesChange = async () => {
+    const db = getDB();
+    if (!db) return;
+
+    const entries = Array.from(categoriesMap.values());
+    for (const entry of entries) {
+      if ((entry as SyncEntity)._deleted) {
+        await categoryDb.deleteCategory(db, entry.id).catch(() => {});
+      } else {
+        await categoryDb.updateCategory(db, entry as Category).catch(() => {});
+      }
+    }
+
+    // Reload store so UI reflects remote changes
+    const { useCategoryStore } = await import('../stores/categoryStore');
+    await useCategoryStore.getState().loadCategories();
+  };
+
   walletsMap.observe(handleWalletsChange);
   transactionsMap.observe(handleTransactionsChange);
+  categoriesMap.observe(handleCategoriesChange);
 
   activeObservers.push(
     () => walletsMap.unobserve(handleWalletsChange),
     () => transactionsMap.unobserve(handleTransactionsChange),
+    () => categoriesMap.unobserve(handleCategoriesChange),
   );
 }
 
@@ -152,11 +218,63 @@ export function onLocalChange(
   googleDriveProvider.scheduleBackup();
 }
 
+/**
+ * Wipe all local app data (wallets, transactions, categories) and the Yjs
+ * persistence store so the device starts clean before joining another device's
+ * sync room via QR scan.
+ *
+ * sync-config (syncKey, Google auth) is intentionally NOT cleared here —
+ * the caller sets the new syncKey right after.
+ */
+export async function clearAllLocalData(): Promise<void> {
+  // Disconnect and clean up any active sync session first
+  disconnectFromSyncRoom();
+
+  // Clear app data stores in flowang-db
+  const db = getDB();
+  if (db) {
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(['wallets', 'transactions', 'categories'], 'readwrite');
+      tx.objectStore('wallets').clear();
+      tx.objectStore('transactions').clear();
+      tx.objectStore('categories').clear();
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
+  // Delete the Yjs IndexedDB persistence store so stale CRDT state doesn't
+  // bleed into the new sync room.
+  await new Promise<void>((resolve) => {
+    const req = indexedDB.deleteDatabase(YJS_STORE);
+    req.onsuccess = () => resolve();
+    req.onerror = () => resolve(); // non-fatal — proceed even if delete fails
+    req.onblocked = () => resolve();
+  });
+
+  // Reload stores so UI reflects the empty state
+  const [{ useWalletStore }, { useTransactionStore }, { useCategoryStore }] = await Promise.all([
+    import('../stores/walletStore'),
+    import('../stores/transactionStore'),
+    import('../stores/categoryStore'),
+  ]);
+  await Promise.all([
+    useWalletStore.getState().loadWallets(),
+    useTransactionStore.getState().loadTransactions(),
+    useCategoryStore.getState().loadCategories(),
+  ]);
+}
+
 export async function connectToSyncRoom(): Promise<void> {
   const syncKey = useSyncStore.getState().syncKey;
   if (!syncKey) return;
 
   try {
+    // Disconnect first to cancel any pending reconnect timers and clean up
+    // the old provider before creating a new one (e.g. after QR scan with a
+    // different key).
+    webrtcProvider.disconnect();
+
     useSyncStore.getState().setSyncStatus('connecting');
     const payload = decodeSyncKey(syncKey);
     await importKeyFromBase64(payload.encryptionKey);

@@ -8,7 +8,7 @@ import { useSync } from '@/hooks/useSync';
 import ConfirmDialog from '@/components/shared/ConfirmDialog';
 import QRScanner from './QRScanner';
 
-export default function SyncKeyCard() {
+export default function SyncKeyCard({ onConnected }: { onConnected?: () => void }) {
   const { syncKey, resetSyncKey } = useSync();
   const [showKey, setShowKey] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -82,7 +82,7 @@ export default function SyncKeyCard() {
       />
 
       {showScanner && (
-        <QRScanner onClose={() => setShowScanner(false)} />
+        <QRScanner onClose={() => setShowScanner(false)} onSuccess={onConnected} />
       )}
     </div>
   );

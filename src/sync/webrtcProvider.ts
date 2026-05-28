@@ -7,9 +7,9 @@ import { WebrtcProvider } from 'y-webrtc';
 import { IndexeddbPersistence } from 'y-indexeddb';
 import { useSyncStore } from './syncStore';
 import { calculateBackoffDelay, MAX_ATTEMPTS } from './backoffUtils';
-import { getEnvConfig } from '../lib/envConfig';
+import { getEnvConfig, getIceServers } from '../lib/envConfig';
 
-const YJS_STORE = 'yjs-sync';
+export const YJS_STORE = 'yjs-sync';
 
 let ydoc: Y.Doc | null = null;
 let webrtcProvider: WebrtcProvider | null = null;
@@ -31,6 +31,15 @@ export function getProvider(): WebrtcProvider | null {
   return webrtcProvider;
 }
 
+/**
+ * Resolves once the IndexedDB persistence has finished loading into the ydoc.
+ * Use this before attaching Yjs observers so you don't miss the initial state.
+ */
+export function whenPersistenceSynced(): Promise<void> {
+  if (!indexeddbProvider) return Promise.resolve();
+  return indexeddbProvider.whenSynced.then(() => undefined);
+}
+
 export function connect(roomName: string, encryptionKey: string): void {
   // On a fresh connect (not a reconnect), reset the attempt counter
   if (!isReconnecting) {
@@ -44,25 +53,29 @@ export function connect(roomName: string, encryptionKey: string): void {
 
   ydoc = new Y.Doc();
   const config = getEnvConfig();
+  const iceServers = getIceServers();
 
-  // Setup IndexedDB persistence
+  // Setup IndexedDB persistence. The ydoc will be populated from local storage
+  // asynchronously — callers should await whenPersistenceSynced() before
+  // reading or observing the ydoc to avoid missing the initial state.
   indexeddbProvider = new IndexeddbPersistence(YJS_STORE, ydoc);
 
-  // Setup WebRTC provider
+  // Setup WebRTC provider synchronously so it can start signaling immediately.
+  // y-webrtc will exchange updates with peers as soon as the connection is
+  // established, and Yjs merges them with whatever the ydoc already contains —
+  // so starting WebRTC before IndexedDB finishes is safe; the CRDT handles it.
   webrtcProvider = new WebrtcProvider(roomName, ydoc, {
     signaling: [config.signalingUrl],
     password: encryptionKey,
+    ...(iceServers.length > 0 && { peerOpts: { config: { iceServers } } }),
   });
 
-  // Connected to signaling server = we're "connected" (ready to sync)
-  // This fires even without a peer, which is the correct UX for a local-first app
   webrtcProvider.on('status', ({ connected }: { connected: boolean }) => {
     if (connected) {
       useSyncStore.getState().setSyncStatus('connected');
       reconnectAttempt = 0;
       isReconnecting = false;
     } else {
-      // Lost signaling connection — schedule reconnect
       useSyncStore.getState().setSyncStatus('connecting');
       scheduleReconnect();
     }
@@ -76,7 +89,7 @@ export function connect(roomName: string, encryptionKey: string): void {
   }
   onlineHandler = () => {
     if (useSyncStore.getState().syncStatus !== 'connected') {
-      isReconnecting = false; // treat coming back online as a fresh connect
+      isReconnecting = false;
       reconnectAttempt = 0;
       scheduleReconnect();
     }
@@ -107,8 +120,15 @@ function scheduleReconnect(): void {
   }, delay);
 }
 
-/** Destroy providers without touching reconnect state or status */
+/** Destroy providers and cancel any pending reconnect timer */
 function _destroyProviders(): void {
+  // Cancel any pending reconnect so the old timer doesn't fire after a new
+  // connect() call (e.g. after scanning a QR code with a different key).
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+
   if (webrtcProvider) {
     webrtcProvider.disconnect();
     webrtcProvider.destroy();

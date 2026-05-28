@@ -24,8 +24,32 @@ const DEFAULT_CATEGORIES: Omit<Category, 'id' | 'createdAt'>[] = [
   { name: 'Hadiah', type: 'income', isDefault: true },
 ];
 
-function generateId(): string {
-  return crypto.randomUUID();
+/**
+ * Generate a deterministic UUID v5-style ID for a default category.
+ * Uses SHA-256 of "flowang-default-category:<name>:<type>" so every device
+ * always produces the same ID for the same category — required for CRDT sync
+ * to treat them as the same entity rather than duplicates.
+ */
+async function deterministicCategoryId(name: string, type: string): Promise<string> {
+  const input = `flowang-default-category:${name}:${type}`;
+  const encoded = new TextEncoder().encode(input);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', encoded);
+  const bytes = new Uint8Array(hashBuffer);
+
+  // Format first 16 bytes as a UUID (variant 4 layout for readability)
+  const hex = Array.from(bytes.slice(0, 16))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+
+  return [
+    hex.slice(0, 8),
+    hex.slice(8, 12),
+    // Set version bits to 5 (name-based SHA)
+    `5${hex.slice(13, 16)}`,
+    // Set variant bits to 10xx
+    ((parseInt(hex.slice(16, 18), 16) & 0x3f) | 0x80).toString(16).padStart(2, '0') + hex.slice(18, 20),
+    hex.slice(20, 32),
+  ].join('-');
 }
 
 // Get all categories
@@ -77,7 +101,9 @@ export async function seedDefaultCategories(db: IDBDatabase): Promise<void> {
   for (const cat of DEFAULT_CATEGORIES) {
     const category: Category = {
       ...cat,
-      id: generateId(),
+      // Deterministic ID so all devices generate the same ID for the same
+      // default category — prevents duplicate entries after CRDT sync.
+      id: await deterministicCategoryId(cat.name, cat.type),
       createdAt: now,
     };
     await addCategory(db, category);

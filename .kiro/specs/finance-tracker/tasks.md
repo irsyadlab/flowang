@@ -10,43 +10,43 @@ Stack: React 19, React Router v7, Tailwind CSS v4, shadcn/ui, Zustand, IndexedDB
 
 ## Tasks
 
-- [ ] 1. Setup fondasi: types, db layer, stores, dan utils
-  - [ ] 1.1 Buat TypeScript interfaces dan enums di `src/types/index.ts`
+- [x] 1. Setup fondasi: types, db layer, stores, dan utils
+  - [x] 1.1 Buat TypeScript interfaces dan enums di `src/types/index.ts`
     - Definisikan `TransactionType`, `CategoryType`, interface `Wallet`, `Category`, `Transaction`, `TransactionFilter`
     - _Requirements: 2.2, 4.1, 3.1_
 
-  - [ ] 1.2 Buat utility functions di `src/lib/utils.ts` dan `src/lib/reportEngine.ts`
+  - [x] 1.2 Buat utility functions di `src/lib/utils.ts` dan `src/lib/reportEngine.ts`
     - Tambahkan `formatCurrency()` dan `formatDate()` ke `utils.ts` (pertahankan `cn()` yang sudah ada)
     - Buat `src/lib/reportEngine.ts` dengan fungsi `filterByDateRange()`, `calculateSummary()`, `groupByMonth()`
     - _Requirements: 7.2, 7.3, 7.5, 5.3_
 
-  - [ ] 1.3 Buat Zod validation schemas di `src/lib/validators.ts`
+  - [x] 1.3 Buat Zod validation schemas di `src/lib/validators.ts`
     - Implementasikan `walletSchema`, `categorySchema`, `transactionSchema` (dengan `superRefine` untuk validasi transfer)
     - _Requirements: 2.8, 2.9, 2.10, 2.11, 3.7, 3.8, 3.9, 4.8, 4.9, 4.10, 4.11, 4.12_
 
-  - [ ] 1.4 Buat IndexedDB layer: `src/db/db.ts`
+  - [x] 1.4 Buat IndexedDB layer: `src/db/db.ts`
     - Implementasikan `openDB()` dengan `onupgradeneeded` untuk membuat object stores `wallets`, `transactions` (dengan indexes), `categories`
     - Terapkan timeout 5 detik menggunakan `Promise.race`
     - Simpan koneksi sebagai singleton
     - _Requirements: 1.1, 1.4_
 
-  - [ ] 1.5 Buat `src/db/walletDb.ts`
+  - [x] 1.5 Buat `src/db/walletDb.ts`
     - Implementasikan fungsi: `getAllWallets()`, `getWalletById()`, `addWallet()`, `updateWallet()`, `deleteWallet()`
     - _Requirements: 2.1, 2.2, 2.3, 2.7_
 
-  - [ ] 1.6 Buat `src/db/categoryDb.ts`
+  - [x] 1.6 Buat `src/db/categoryDb.ts`
     - Implementasikan fungsi: `getAllCategories()`, `getCategoryById()`, `addCategory()`, `updateCategory()`, `deleteCategory()`
     - Sertakan logika seeding 9 kategori default saat storage kosong
     - _Requirements: 1.2, 3.1, 3.2, 3.6_
 
-  - [ ] 1.7 Buat `src/db/transactionDb.ts`
+  - [x] 1.7 Buat `src/db/transactionDb.ts`
     - Implementasikan `addTransaction(db, transaction, walletUpdates[])` dalam satu IDBTransaction atomik
     - Implementasikan `updateTransaction(db, id, newRecord, walletUpdates[])` dalam satu IDBTransaction atomik
     - Implementasikan `deleteTransaction(db, id, walletUpdates[])` dalam satu IDBTransaction atomik
     - Implementasikan `getAllTransactions()`, `getTransactionById()`, `getTransactionsByWalletId()`
     - _Requirements: 4.2, 4.3, 4.4, 4.5, 4.14, 4.15, 4.16, 9.1, 9.2_
 
-  - [ ] 1.8 Buat Zustand stores: `src/stores/uiStore.ts`, `src/stores/walletStore.ts`, `src/stores/categoryStore.ts`, `src/stores/transactionStore.ts`
+  - [x] 1.8 Buat Zustand stores: `src/stores/uiStore.ts`, `src/stores/walletStore.ts`, `src/stores/categoryStore.ts`, `src/stores/transactionStore.ts`
     - `uiStore`: state `dbReady`, `dbError`, actions `setDbReady`, `setDbError`
     - `walletStore`: state `wallets`, `isLoading`, `error`; actions `loadWallets`, `addWallet`, `updateWallet`, `deleteWallet`, `recalculateBalance`
     - `categoryStore`: state `categories`, `isLoading`, `error`; actions `loadCategories`, `addCategory`, `updateCategory`, `deleteCategory`
@@ -54,13 +54,13 @@ Stack: React 19, React Router v7, Tailwind CSS v4, shadcn/ui, Zustand, IndexedDB
     - Setiap action store harus return early jika `!dbReady`
     - _Requirements: 1.3, 1.4, 2.5, 3.3, 3.4, 4.5, 9.1, 9.2_
 
-  - [ ] 1.9 Buat custom hooks: `src/hooks/useWallets.ts`, `src/hooks/useTransactions.ts`, `src/hooks/useCategories.ts`, `src/hooks/useReports.ts`
+  - [x] 1.9 Buat custom hooks: `src/hooks/useWallets.ts`, `src/hooks/useTransactions.ts`, `src/hooks/useCategories.ts`, `src/hooks/useReports.ts`
     - Setiap hook mengekspos data dan actions dari store yang relevan
     - `useReports` menghitung summary menggunakan `reportEngine` dari data di `transactionStore`
     - _Requirements: 5.1, 5.2, 5.3, 7.2, 7.3, 7.5_
 
 - [ ] 2. Inisialisasi aplikasi, AppLayout, BottomNav, dan routing
-  - [ ] 2.1 Update `src/App.tsx` untuk inisialisasi DB saat mount
+  - [x] 2.1 Update `src/App.tsx` untuk inisialisasi DB saat mount
     - Panggil `openDB()` di `useEffect`, set `uiStore.setDbReady(true)` jika berhasil, `setDbError(message)` jika gagal/timeout
     - Seed kategori default jika storage kosong (panggil `categoryStore.loadCategories()` setelah DB ready)
     - _Requirements: 1.1, 1.2, 1.4_

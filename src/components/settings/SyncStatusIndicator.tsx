@@ -12,11 +12,11 @@ export default function SyncStatusIndicator() {
       ? 'bg-green-500'
       : syncStatus === 'connecting'
         ? 'bg-yellow-500 animate-pulse'
-        : 'bg-red-500';
+        : 'bg-zinc-400';
 
   const label =
     syncStatus === 'connected'
-      ? 'Terhubung (Real-time)'
+      ? 'Siap Sinkronisasi'
       : syncStatus === 'connecting'
         ? 'Menghubungkan...'
         : 'Tidak Terhubung';

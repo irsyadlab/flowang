@@ -14,18 +14,26 @@ const YJS_STORE = 'yjs-sync';
 let ydoc: Y.Doc | null = null;
 let webrtcProvider: WebrtcProvider | null = null;
 let indexeddbProvider: IndexeddbPersistence | null = null;
+// reconnectAttempt lives outside connect() so disconnect() doesn't reset it
 let reconnectAttempt = 0;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let onlineHandler: (() => void) | null = null;
 let currentRoomName: string | null = null;
 let currentEncryptionKey: string | null = null;
+// Track whether we're in a scheduled reconnect (vs fresh connect)
+let isReconnecting = false;
 
 export function getYDoc(): Y.Doc | null {
   return ydoc;
 }
 
 export function connect(roomName: string, encryptionKey: string): void {
-  disconnect();
+  // On a fresh connect (not a reconnect), reset the attempt counter
+  if (!isReconnecting) {
+    reconnectAttempt = 0;
+  }
+
+  _destroyProviders();
 
   currentRoomName = roomName;
   currentEncryptionKey = encryptionKey;
@@ -42,15 +50,15 @@ export function connect(roomName: string, encryptionKey: string): void {
     password: encryptionKey,
   });
 
-  webrtcProvider.on('synced', ({ synced }: { synced: boolean }) => {
-    if (synced) {
+  // Connected to signaling server = we're "connected" (ready to sync)
+  // This fires even without a peer, which is the correct UX for a local-first app
+  webrtcProvider.on('status', ({ connected }: { connected: boolean }) => {
+    if (connected) {
       useSyncStore.getState().setSyncStatus('connected');
       reconnectAttempt = 0;
-    }
-  });
-
-  webrtcProvider.on('status', ({ connected }: { connected: boolean }) => {
-    if (!connected) {
+      isReconnecting = false;
+    } else {
+      // Lost signaling connection — schedule reconnect
       useSyncStore.getState().setSyncStatus('connecting');
       scheduleReconnect();
     }
@@ -59,8 +67,13 @@ export function connect(roomName: string, encryptionKey: string): void {
   useSyncStore.getState().setSyncStatus('connecting');
 
   // Listen for browser online event
+  if (onlineHandler) {
+    window.removeEventListener('online', onlineHandler);
+  }
   onlineHandler = () => {
     if (useSyncStore.getState().syncStatus !== 'connected') {
+      isReconnecting = false; // treat coming back online as a fresh connect
+      reconnectAttempt = 0;
       scheduleReconnect();
     }
   };
@@ -71,6 +84,7 @@ function scheduleReconnect(): void {
   if (!currentRoomName || !currentEncryptionKey) return;
   if (reconnectAttempt >= MAX_ATTEMPTS) {
     useSyncStore.getState().setSyncStatus('disconnected');
+    isReconnecting = false;
     return;
   }
 
@@ -78,6 +92,7 @@ function scheduleReconnect(): void {
 
   const delay = calculateBackoffDelay(reconnectAttempt);
   reconnectAttempt++;
+  isReconnecting = true;
 
   reconnectTimer = setTimeout(() => {
     try {
@@ -88,12 +103,31 @@ function scheduleReconnect(): void {
   }, delay);
 }
 
+/** Destroy providers without touching reconnect state or status */
+function _destroyProviders(): void {
+  if (webrtcProvider) {
+    webrtcProvider.disconnect();
+    webrtcProvider.destroy();
+    webrtcProvider = null;
+  }
+  if (indexeddbProvider) {
+    indexeddbProvider.destroy();
+    indexeddbProvider = null;
+  }
+  if (ydoc) {
+    ydoc.destroy();
+    ydoc = null;
+  }
+}
+
 export function disconnect(): void {
   if (reconnectTimer) {
     clearTimeout(reconnectTimer);
     reconnectTimer = null;
   }
+
   reconnectAttempt = 0;
+  isReconnecting = false;
   currentRoomName = null;
   currentEncryptionKey = null;
 
@@ -102,21 +136,7 @@ export function disconnect(): void {
     onlineHandler = null;
   }
 
-  if (webrtcProvider) {
-    webrtcProvider.disconnect();
-    webrtcProvider.destroy();
-    webrtcProvider = null;
-  }
-
-  if (indexeddbProvider) {
-    indexeddbProvider.destroy();
-    indexeddbProvider = null;
-  }
-
-  if (ydoc) {
-    ydoc.destroy();
-    ydoc = null;
-  }
+  _destroyProviders();
 
   useSyncStore.getState().setSyncStatus('disconnected');
 }

@@ -7,11 +7,16 @@ import { useCategoryStore } from "./stores/categoryStore";
 import { seedDefaultCategories } from "./db/categoryDb";
 import { getDB } from "./db/db";
 import { initialize as initSync } from "./sync/syncManager";
+import { useTheme } from "./hooks/useTheme";
+import { Toaster } from "./components/ui/sonner";
 import "../styles/globals.css";
 
 export function App() {
   const setDbReady = useUIStore((state) => state.setDbReady);
   const setDbError = useUIStore((state) => state.setDbError);
+
+  // Apply theme on mount and whenever it changes
+  useTheme();
   const loadCategories = useCategoryStore((state) => state.loadCategories);
 
   useEffect(() => {
@@ -57,7 +62,12 @@ export function App() {
     };
   }, [setDbReady, setDbError, loadCategories]);
 
-  return <RouterProvider router={router} />;
+  return (
+    <>
+      <RouterProvider router={router} />
+      <Toaster position="top-center" richColors />
+    </>
+  );
 }
 
 export default App;

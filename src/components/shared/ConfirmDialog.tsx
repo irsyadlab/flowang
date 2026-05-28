@@ -17,6 +17,8 @@ interface ConfirmDialogProps {
   confirmLabel?: string;
   onConfirm: () => void;
   destructive?: boolean;
+  confirmDisabled?: boolean;
+  children?: React.ReactNode;
 }
 
 export default function ConfirmDialog({
@@ -27,6 +29,8 @@ export default function ConfirmDialog({
   confirmLabel = "Hapus",
   onConfirm,
   destructive = true,
+  confirmDisabled = false,
+  children,
 }: ConfirmDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -35,11 +39,13 @@ export default function ConfirmDialog({
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
+        {children}
         <AlertDialogFooter>
           <AlertDialogCancel>Batal</AlertDialogCancel>
           <AlertDialogAction
             variant={destructive ? "destructive" : "default"}
             onClick={onConfirm}
+            disabled={confirmDisabled}
           >
             {confirmLabel}
           </AlertDialogAction>

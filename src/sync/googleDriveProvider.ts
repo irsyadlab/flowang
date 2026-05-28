@@ -5,6 +5,7 @@
 import { useSyncStore } from './syncStore';
 import { getEnvConfig } from '../lib/envConfig';
 import { importKeyFromBase64, encrypt, decrypt } from './cryptoService';
+import { decodeSyncKey } from './syncKeyUtils';
 import { getDB } from '../db/db';
 
 const BACKUP_FILENAME = 'flowang-backup.enc';
@@ -142,6 +143,9 @@ async function deserializeToIndexedDB(data: Uint8Array): Promise<void> {
 
     const tx = db.transaction(storeName, 'readwrite');
     const store = tx.objectStore(storeName);
+
+    // Clear existing data before restoring to avoid stale/duplicate records
+    store.clear();
     for (const record of records) {
       store.put(record);
     }
@@ -213,6 +217,14 @@ export function scheduleBackup(): void {
   }, 30_000);
 }
 
+export async function backupNow(): Promise<void> {
+  if (backupDebounceTimer) {
+    clearTimeout(backupDebounceTimer);
+    backupDebounceTimer = null;
+  }
+  await performBackup();
+}
+
 async function performBackup(): Promise<void> {
   const syncKey = useSyncStore.getState().syncKey;
   if (!syncKey) return;
@@ -222,9 +234,9 @@ async function performBackup(): Promise<void> {
   for (let attempt = 0; attempt < RETRY_COUNT; attempt++) {
     try {
       const jsonBytes = await serializeIndexedDB();
-      const key = await importKeyFromBase64(
-        JSON.parse(atob(syncKey.replace(/-/g, '+').replace(/_/g, '/'))).encryptionKey
-      );
+      // Use decodeSyncKey consistently (same as restore)
+      const decoded = decodeSyncKey(syncKey);
+      const key = await importKeyFromBase64(decoded.encryptionKey);
       const encrypted = await encrypt(jsonBytes, key);
 
       const files = await listAppDataFiles();
@@ -238,7 +250,6 @@ async function performBackup(): Promise<void> {
       const now = new Date().toISOString();
       useSyncStore.getState().setLastBackupTimestamp(now);
 
-      // Show success notification
       useSyncStore.getState().setSyncError(null);
       return;
     } catch (error) {
@@ -282,25 +293,42 @@ export async function checkRestore(): Promise<boolean> {
   }
 }
 
+/** Check if a backup file exists in Drive, regardless of local data state. */
+export async function checkBackupExists(): Promise<boolean> {
+  try {
+    const files = await listAppDataFiles();
+    return files.some((f) => f.name === BACKUP_FILENAME);
+  } catch {
+    return false;
+  }
+}
+
 export async function restore(): Promise<void> {
   const syncKey = useSyncStore.getState().syncKey;
   if (!syncKey) throw new Error('Sync Key tidak tersedia');
+  return restoreWithKey(syncKey);
+}
 
+/**
+ * Restore backup using an explicitly provided sync key.
+ * Used when restoring on a new device where the local key differs from the backup key.
+ */
+export async function restoreWithKey(syncKey: string): Promise<void> {
   try {
     const files = await listAppDataFiles();
     const backup = files.find((f) => f.name === BACKUP_FILENAME);
-    if (!backup) throw new Error('Backup tidak ditemukan');
+    if (!backup) throw new Error('Backup tidak ditemukan di Google Drive');
 
     const encrypted = await downloadFile(backup.id);
 
-    // Decode sync key to get encryption key
-    const decoded = JSON.parse(
-      atob(syncKey.replace(/-/g, '+').replace(/_/g, '/'))
-    );
+    const decoded = decodeSyncKey(syncKey);
     const key = await importKeyFromBase64(decoded.encryptionKey);
     const decrypted = await decrypt(encrypted, key);
 
     await deserializeToIndexedDB(decrypted);
+
+    // After successful restore, adopt the provided sync key as the active one
+    useSyncStore.getState().setSyncKey(syncKey);
 
     // Reload all Zustand stores
     const { useWalletStore } = await import('../stores/walletStore');
@@ -313,8 +341,9 @@ export async function restore(): Promise<void> {
       useCategoryStore.getState().loadCategories(),
     ]);
   } catch (error) {
-    if ((error as Error).message?.includes('OperationError')) {
-      throw new Error('Sync Key tidak cocok dengan backup', { cause: error });
+    const msg = (error as Error).message ?? '';
+    if (msg.includes('OperationError') || msg.includes('decrypt')) {
+      throw new Error('Sync Key tidak cocok dengan backup — pastikan menggunakan Sync Key dari device asal', { cause: error });
     }
     throw error;
   }

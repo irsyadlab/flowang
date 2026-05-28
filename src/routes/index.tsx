@@ -11,6 +11,7 @@ import WalletDetailPage from "@/pages/wallets/WalletDetailPage";
 import CategoriesPage from "@/pages/categories/CategoriesPage";
 import NewCategoryPage from "@/pages/categories/NewCategoryPage";
 import EditCategoryPage from "@/pages/categories/EditCategoryPage";
+import SettingsPage from "@/pages/settings/SettingsPage";
 import { createBrowserRouter } from "react-router-dom";
 
 export const router = createBrowserRouter([
@@ -30,6 +31,7 @@ export const router = createBrowserRouter([
       { path: "categories", element: <CategoriesPage /> },
       { path: "categories/new", element: <NewCategoryPage /> },
       { path: "categories/:id", element: <EditCategoryPage /> },
+      { path: "settings", element: <SettingsPage /> },
     ],
   },
 ]);

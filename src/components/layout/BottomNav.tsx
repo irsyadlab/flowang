@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, ArrowLeftRight, BarChart3, Wallet, Tag } from "lucide-react";
+import { LayoutDashboard, ArrowLeftRight, BarChart3, Wallet, Tag, Settings } from "lucide-react";
+import { useSyncStore } from "@/sync/syncStore";
 
 const navItems = [
   { to: "/", icon: LayoutDashboard, label: "Beranda" },
@@ -7,7 +8,28 @@ const navItems = [
   { to: "/reports", icon: BarChart3, label: "Laporan" },
   { to: "/wallets", icon: Wallet, label: "Wallet" },
   { to: "/categories", icon: Tag, label: "Kategori" },
+  { to: "/settings", icon: Settings, label: "Pengaturan" },
 ];
+
+function SyncIndicator() {
+  const syncStatus = useSyncStore((s) => s.syncStatus);
+  const syncKey = useSyncStore((s) => s.syncKey);
+
+  if (!syncKey) return null;
+
+  const dotColor =
+    syncStatus === "connected"
+      ? "bg-green-500"
+      : syncStatus === "connecting"
+        ? "bg-yellow-500 animate-pulse"
+        : "bg-red-500";
+
+  return (
+    <span
+      className={`absolute right-0 top-0 h-1.5 w-1.5 rounded-full ${dotColor}`}
+    />
+  );
+}
 
 export default function BottomNav() {
   return (
@@ -30,6 +52,7 @@ export default function BottomNav() {
               <>
                 <div className={`relative flex items-center justify-center rounded-xl p-1.5 transition-all duration-200 ${isActive ? "bg-primary/8" : ""}`}>
                   <Icon className={`transition-all duration-200 ${isActive ? "h-[22px] w-[22px]" : "h-5 w-5"}`} />
+                  {to === "/settings" && <SyncIndicator />}
                   {isActive && (
                     <span className="absolute -bottom-0.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-primary" />
                   )}

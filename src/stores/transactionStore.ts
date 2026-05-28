@@ -4,6 +4,8 @@ import * as transactionDb from '../db/transactionDb';
 import { getDB } from '../db/db';
 import { useUIStore } from './uiStore';
 import { useWalletStore } from './walletStore';
+import { useSyncStore } from '../sync/syncStore';
+import { onLocalChange } from '../sync/syncManager';
 
 interface TransactionState {
   transactions: Transaction[];
@@ -113,6 +115,10 @@ export const useTransactionStore = create<TransactionState & TransactionActions>
       
       // Reload wallets to reflect balance changes
       await useWalletStore.getState().loadWallets();
+
+      if (useSyncStore.getState().syncKey) {
+        onLocalChange('transactions', transaction);
+      }
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
     }
@@ -145,6 +151,10 @@ export const useTransactionStore = create<TransactionState & TransactionActions>
       
       // Reload wallets to reflect balance changes
       await useWalletStore.getState().loadWallets();
+
+      if (useSyncStore.getState().syncKey) {
+        onLocalChange('transactions', updated);
+      }
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
     }
@@ -181,6 +191,10 @@ export const useTransactionStore = create<TransactionState & TransactionActions>
       
       // Reload wallets to reflect balance changes
       await useWalletStore.getState().loadWallets();
+
+      if (useSyncStore.getState().syncKey) {
+        onLocalChange('transactions', { id, _deleted: true });
+      }
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
     }

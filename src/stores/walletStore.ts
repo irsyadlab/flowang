@@ -4,6 +4,8 @@ import * as walletDb from '../db/walletDb';
 import { getDB } from '../db/db';
 import { getAllTransactions, addTransactionWithWalletUpdate } from '../db/transactionDb';
 import { useUIStore } from './uiStore';
+import { useSyncStore } from '../sync/syncStore';
+import { onLocalChange } from '../sync/syncManager';
 
 interface WalletState {
   wallets: Wallet[];
@@ -62,6 +64,10 @@ export const useWalletStore = create<WalletState & WalletActions>((set, get) => 
         wallets: [...state.wallets, wallet],
         isLoading: false,
       }));
+
+      if (useSyncStore.getState().syncKey) {
+        onLocalChange('wallets', wallet);
+      }
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
     }
@@ -120,6 +126,10 @@ export const useWalletStore = create<WalletState & WalletActions>((set, get) => 
         // Update transaction store too
         const { useTransactionStore } = await import('./transactionStore');
         useTransactionStore.setState({ transactions });
+
+        if (useSyncStore.getState().syncKey) {
+          onLocalChange('wallets', updatedWallet);
+        }
       } else {
         const updated: Wallet = {
           ...existing,
@@ -132,6 +142,10 @@ export const useWalletStore = create<WalletState & WalletActions>((set, get) => 
           wallets: state.wallets.map((w) => (w.id === id ? updated : w)),
           isLoading: false,
         }));
+
+        if (useSyncStore.getState().syncKey) {
+          onLocalChange('wallets', updated);
+        }
       }
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
@@ -161,6 +175,10 @@ export const useWalletStore = create<WalletState & WalletActions>((set, get) => 
         wallets: state.wallets.filter((w) => w.id !== id),
         isLoading: false,
       }));
+
+      if (useSyncStore.getState().syncKey) {
+        onLocalChange('wallets', { id, _deleted: true });
+      }
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
     }

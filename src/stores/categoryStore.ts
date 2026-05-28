@@ -4,6 +4,8 @@ import * as categoryDb from '../db/categoryDb';
 import { getDB } from '../db/db';
 import { getAllTransactions } from '../db/transactionDb';
 import { useUIStore } from './uiStore';
+import { useSyncStore } from '../sync/syncStore';
+import { onLocalChange } from '../sync/syncManager';
 
 interface CategoryState {
   categories: Category[];
@@ -59,6 +61,10 @@ export const useCategoryStore = create<CategoryState & CategoryActions>((set, ge
         categories: [...state.categories, category],
         isLoading: false,
       }));
+
+      if (useSyncStore.getState().syncKey) {
+        onLocalChange('categories', category);
+      }
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
     }
@@ -85,6 +91,10 @@ export const useCategoryStore = create<CategoryState & CategoryActions>((set, ge
         categories: state.categories.map((c) => (c.id === id ? updated : c)),
         isLoading: false,
       }));
+
+      if (useSyncStore.getState().syncKey) {
+        onLocalChange('categories', updated);
+      }
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
     }
@@ -119,6 +129,10 @@ export const useCategoryStore = create<CategoryState & CategoryActions>((set, ge
         categories: state.categories.filter((c) => c.id !== id),
         isLoading: false,
       }));
+
+      if (useSyncStore.getState().syncKey) {
+        onLocalChange('categories', { id, _deleted: true });
+      }
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
     }

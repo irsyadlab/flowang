@@ -6,6 +6,7 @@ import { useUIStore } from "./stores/uiStore";
 import { useCategoryStore } from "./stores/categoryStore";
 import { seedDefaultCategories } from "./db/categoryDb";
 import { getDB } from "./db/db";
+import { initialize as initSync } from "./sync/syncManager";
 import "../styles/globals.css";
 
 export function App() {
@@ -35,6 +36,9 @@ export function App() {
 
         // Load categories (seeds if needed)
         await loadCategories();
+
+        // Initialize sync manager
+        initSync().catch(() => {});
       } catch (error) {
         // Handle abort
         if (abortController.signal.aborted) return;

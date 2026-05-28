@@ -83,7 +83,8 @@ src/
 │   ├── wallets/
 │   │   ├── WalletsPage.tsx
 │   │   ├── NewWalletPage.tsx
-│   │   └── EditWalletPage.tsx
+│   │   ├── EditWalletPage.tsx
+│   │   └── WalletDetailPage.tsx
 │   └── categories/
 │       ├── CategoriesPage.tsx
 │       ├── NewCategoryPage.tsx
@@ -104,7 +105,9 @@ src/
 │   │   └── TransactionFilter.tsx
 │   ├── wallets/
 │   │   ├── WalletForm.tsx
-│   │   └── WalletItem.tsx
+│   │   ├── WalletItem.tsx
+│   │   ├── WalletDetailHeader.tsx
+│   │   └── WalletTransactionList.tsx
 │   ├── categories/
 │   │   ├── CategoryForm.tsx
 │   │   └── CategoryItem.tsx
@@ -166,6 +169,7 @@ createBrowserRouter([
       { path: "wallets",                element: <WalletsPage /> },
       { path: "wallets/new",            element: <NewWalletPage /> },
       { path: "wallets/:id",            element: <EditWalletPage /> },
+      { path: "wallets/:id/detail",     element: <WalletDetailPage /> },
       { path: "categories",             element: <CategoriesPage /> },
       { path: "categories/new",         element: <NewCategoryPage /> },
       { path: "categories/:id",         element: <EditCategoryPage /> },
@@ -201,7 +205,7 @@ Dashboard
 ├── SummaryCard (total saldo)
 ├── MonthSummary (income/expense bulan ini)
 ├── WalletList
-│   └── WalletItem[]
+│   └── WalletItem[] (klik → navigasi ke /wallets/:id/detail)
 └── RecentTransactions
     └── TransactionItem[]
 ```
@@ -231,8 +235,19 @@ ReportsPage
 **WalletsPage / CategoriesPage**
 ```
 WalletsPage
-├── WalletItem[] (nama, saldo, tombol edit/hapus)
+├── WalletItem[] (nama, saldo, klik → navigasi ke /wallets/:id/detail)
+│   ├── Tombol edit (aksi sekunder)
+│   └── Tombol hapus (aksi sekunder)
 └── FAB / tombol tambah wallet baru
+```
+
+**WalletDetailPage**
+```
+WalletDetailPage
+├── WalletDetailHeader (nama, saldo terkini, saldo awal, total income/expense)
+├── Tombol tambah transaksi (pre-filled walletId)
+└── WalletTransactionList
+    └── TransactionItem[] (klik → navigasi ke edit)
 ```
 
 ### TransactionForm Interface
@@ -770,6 +785,14 @@ Sebelum `deleteCategory`, store mengecek:
 
 ---
 
+### Property 16: Wallet Transaction Completeness
+
+*For any* wallet dengan id tertentu, daftar transaksi yang ditampilkan di Wallet_Detail_Page harus mencakup semua dan hanya transaksi yang memiliki `walletId === id` ATAU `toWalletId === id`. Tidak ada transaksi yang terlewat (completeness) dan tidak ada transaksi dari wallet lain yang muncul (soundness).
+
+**Validates: Requirements 10.3**
+
+---
+
 ## Testing Strategy
 
 ### Dual Testing Approach
@@ -807,7 +830,8 @@ src/
     │   └── transactionStore.test.ts # Property 10, 13
     ├── lib/
     │   ├── reportEngine.test.ts   # Property 11, 12
-    │   └── validators.test.ts     # Property 15, edge cases
+    │   ├── validators.test.ts     # Property 15, edge cases
+    │   └── walletTransactionFilter.test.ts  # Property 16
     └── integration/
         ├── dbInit.test.ts         # Smoke: DB initialization
         └── defaultCategories.test.ts # Example: 9 default categories

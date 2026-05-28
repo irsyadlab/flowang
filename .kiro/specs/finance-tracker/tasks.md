@@ -356,6 +356,47 @@ Stack: React 19, React Router v7, Tailwind CSS v4, shadcn/ui, Zustand, IndexedDB
 - [x] 13. Final checkpoint — Pastikan semua tests lulus
   - Pastikan semua tests lulus, tanyakan kepada user jika ada pertanyaan.
 
+- [x] 14. Wallet Detail Page
+  - [x] 14.1 Update `src/components/wallets/WalletItem.tsx`
+    - Buat seluruh area card wallet dapat diklik (navigasi ke `/wallets/:id/detail`)
+    - Pertahankan tombol edit dan hapus sebagai aksi sekunder (gunakan `stopPropagation` agar klik tombol tidak trigger navigasi)
+    - _Requirements: 10.1_
+
+  - [x] 14.2 Update `src/components/dashboard/WalletList.tsx`
+    - Buat setiap wallet item di Dashboard dapat diklik untuk navigasi ke `/wallets/:id/detail`
+    - _Requirements: 10.1_
+
+  - [x] 14.3 Tambahkan route baru di `src/routes/index.tsx`
+    - Tambahkan `{ path: "wallets/:id/detail", element: <WalletDetailPage /> }`
+    - _Requirements: 10.1_
+
+  - [x] 14.4 Buat `src/components/wallets/WalletDetailHeader.tsx`
+    - Tampilkan nama wallet, saldo terkini (format currency), saldo awal
+    - Tampilkan total Income, total Expense, dan saldo bersih dari transaksi wallet tersebut (Transfer dikecualikan)
+    - _Requirements: 10.2, 10.5_
+
+  - [x] 14.5 Buat `src/components/wallets/WalletTransactionList.tsx`
+    - Filter transaksi dari `transactionStore` di mana `walletId === id` ATAU `toWalletId === id`
+    - Urutkan berdasarkan tanggal descending
+    - Render menggunakan `TransactionItem` yang sudah ada
+    - Klik pada `TransactionItem` navigasi ke `/transactions/:id`
+    - Tampilkan `EmptyState` jika tidak ada transaksi
+    - Tampilkan `LoadingSpinner` saat loading
+    - _Requirements: 10.3, 10.4, 10.6, 10.8_
+
+  - [x] 14.6 Buat halaman `src/pages/wallets/WalletDetailPage.tsx`
+    - Ambil wallet berdasarkan `:id` dari `walletStore`
+    - Jika wallet tidak ditemukan, tampilkan `ErrorMessage`
+    - Susun `WalletDetailHeader` dan `WalletTransactionList`
+    - Tombol "Tambah Transaksi" yang navigasi ke `/transactions/new?walletId=:id` (pre-fill walletId)
+    - Update `NewTransactionPage` untuk membaca query param `walletId` dan pre-fill field wallet
+    - _Requirements: 10.1, 10.7_
+
+  - [x]* 14.7 Tulis property test untuk Wallet Transaction Completeness (Property 16) di `src/__tests__/lib/walletTransactionFilter.test.ts`
+    - **Property 16: Wallet Transaction Completeness**
+    - *For any* wallet id, daftar transaksi yang ditampilkan harus mencakup semua dan hanya transaksi dengan `walletId === id` ATAU `toWalletId === id`
+    - **Validates: Requirements 10.3**
+
 ---
 
 ## Notes
@@ -390,7 +431,10 @@ Stack: React 19, React Router v7, Tailwind CSS v4, shadcn/ui, Zustand, IndexedDB
     { "id": 10, "tasks": ["7.4", "8.3", "9.4"] },
     { "id": 11, "tasks": ["12.1"] },
     { "id": 12, "tasks": ["12.2", "12.3"] },
-    { "id": 13, "tasks": ["12.4", "12.5", "12.6", "12.7", "12.8", "12.9", "12.10", "12.11", "12.12", "12.13", "12.14"] }
+    { "id": 13, "tasks": ["12.4", "12.5", "12.6", "12.7", "12.8", "12.9", "12.10", "12.11", "12.12", "12.13", "12.14"] },
+    { "id": 14, "tasks": ["14.1", "14.2", "14.3", "14.4", "14.5"] },
+    { "id": 15, "tasks": ["14.6"] },
+    { "id": 16, "tasks": ["14.7"] }
   ]
 }
 ```

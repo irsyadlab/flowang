@@ -27,6 +27,7 @@ Flowang adalah aplikasi pencatatan keuangan personal berbasis web dengan pendeka
 - **Category_Form**: Formulir untuk membuat atau mengedit kategori.
 - **Report_Page**: Halaman laporan dengan tiga tab: Realtime, Bulanan, dan Custom.
 - **Bottom_Navigation**: Navigasi utama aplikasi yang terletak di bagian bawah layar.
+- **Wallet_Detail_Page**: Halaman yang menampilkan informasi detail wallet beserta daftar transaksi yang terkait dengan wallet tersebut.
 
 ---
 
@@ -185,3 +186,20 @@ Flowang adalah aplikasi pencatatan keuangan personal berbasis web dengan pendeka
 4. IF Storage tidak tersedia saat App dimuat ulang (misalnya IndexedDB diblokir atau dihapus oleh browser), THEN THE App SHALL menampilkan pesan error bahwa data tidak dapat dimuat dan menyarankan pengguna untuk memeriksa pengaturan browser.
 5. THE Wallet_Manager SHALL memastikan saldo wallet selalu merupakan hasil kalkulasi dari saldo awal ditambah total seluruh transaksi Income, dikurangi total seluruh transaksi Expense, dikurangi total seluruh Transfer keluar, dan ditambah total seluruh Transfer masuk yang terkait dengan wallet tersebut.
 6. FOR ALL transaksi yang disimpan ke Storage kemudian dibaca kembali, THE Storage SHALL menghasilkan data yang identik dengan data yang disimpan, mencakup seluruh field: id, type, amount, walletId, categoryId, date, note, createdAt, dan updatedAt (round-trip property).
+
+---
+
+### Requirement 10: Detail Wallet dan Riwayat Transaksi per Wallet
+
+**User Story:** Sebagai pengguna, saya ingin melihat semua transaksi yang terkait dengan sebuah wallet ketika saya mengklik wallet tersebut, sehingga saya dapat memantau aktivitas keuangan per rekening secara terpisah.
+
+#### Acceptance Criteria
+
+1. WHEN pengguna mengklik wallet dari halaman Wallets atau Dashboard, THE App SHALL mengarahkan pengguna ke Wallet_Detail_Page untuk wallet tersebut.
+2. THE Wallet_Detail_Page SHALL menampilkan nama wallet, saldo terkini, dan saldo awal wallet yang dipilih.
+3. THE Wallet_Detail_Page SHALL menampilkan daftar semua transaksi yang terkait dengan wallet tersebut — mencakup transaksi di mana wallet menjadi sumber (walletId) maupun tujuan (toWalletId untuk Transfer) — diurutkan berdasarkan tanggal transaksi secara descending.
+4. WHEN tidak ada transaksi yang terkait dengan wallet, THE Wallet_Detail_Page SHALL menampilkan pesan empty state.
+5. THE Wallet_Detail_Page SHALL menampilkan total Income, total Expense, dan saldo bersih dari transaksi yang terkait dengan wallet tersebut, dengan mengecualikan transaksi bertipe Transfer dari perhitungan total Income maupun total Expense.
+6. WHEN pengguna mengklik transaksi di Wallet_Detail_Page, THE App SHALL mengarahkan pengguna ke halaman edit transaksi tersebut.
+7. THE Wallet_Detail_Page SHALL menyediakan tombol untuk menambah transaksi baru yang sudah pre-filled dengan wallet tersebut sebagai wallet sumber.
+8. WHILE data transaksi sedang dimuat, THE Wallet_Detail_Page SHALL menampilkan indikator loading.

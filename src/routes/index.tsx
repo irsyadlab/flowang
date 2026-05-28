@@ -7,6 +7,7 @@ import ReportsPage from "@/pages/reports/ReportsPage";
 import WalletsPage from "@/pages/wallets/WalletsPage";
 import NewWalletPage from "@/pages/wallets/NewWalletPage";
 import EditWalletPage from "@/pages/wallets/EditWalletPage";
+import WalletDetailPage from "@/pages/wallets/WalletDetailPage";
 import CategoriesPage from "@/pages/categories/CategoriesPage";
 import NewCategoryPage from "@/pages/categories/NewCategoryPage";
 import EditCategoryPage from "@/pages/categories/EditCategoryPage";
@@ -25,6 +26,7 @@ export const router = createBrowserRouter([
       { path: "wallets", element: <WalletsPage /> },
       { path: "wallets/new", element: <NewWalletPage /> },
       { path: "wallets/:id", element: <EditWalletPage /> },
+      { path: "wallets/:id/detail", element: <WalletDetailPage /> },
       { path: "categories", element: <CategoriesPage /> },
       { path: "categories/new", element: <NewCategoryPage /> },
       { path: "categories/:id", element: <EditCategoryPage /> },

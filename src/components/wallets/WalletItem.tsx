@@ -23,7 +23,18 @@ export default function WalletItem({ wallet }: WalletItemProps) {
 
   return (
     <>
-      <div className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => navigate(`/wallets/${wallet.id}/detail`)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            navigate(`/wallets/${wallet.id}/detail`);
+          }
+        }}
+        className="flex cursor-pointer items-center justify-between rounded-lg border border-border px-4 py-3 transition-colors hover:bg-accent/50"
+      >
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium">{wallet.name}</p>
           <p className="text-sm text-muted-foreground">{formatCurrency(wallet.balance)}</p>
@@ -31,14 +42,20 @@ export default function WalletItem({ wallet }: WalletItemProps) {
         <div className="flex items-center gap-1">
           <button
             type="button"
-            onClick={() => navigate(`/wallets/${wallet.id}`)}
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/wallets/${wallet.id}`);
+            }}
             className="inline-flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
           >
             <Pencil className="h-4 w-4" />
           </button>
           <button
             type="button"
-            onClick={() => setConfirmOpen(true)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setConfirmOpen(true);
+            }}
             className="inline-flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
           >
             <Trash2 className="h-4 w-4" />

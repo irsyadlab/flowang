@@ -27,6 +27,10 @@ export function getYDoc(): Y.Doc | null {
   return ydoc;
 }
 
+export function getProvider(): WebrtcProvider | null {
+  return webrtcProvider;
+}
+
 export function connect(roomName: string, encryptionKey: string): void {
   // On a fresh connect (not a reconnect), reset the attempt counter
   if (!isReconnecting) {

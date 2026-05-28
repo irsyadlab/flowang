@@ -32,8 +32,8 @@ export default function SyncKeyCard() {
   return (
     <div className="space-y-4">
       <div className="flex justify-center">
-        <div className="rounded-xl border border-border bg-white p-3 dark:bg-zinc-900">
-          <QRCodeSVG value={syncKey} size={160} level="M" />
+        <div className="rounded-xl border border-border bg-white p-4">
+          <QRCodeSVG value={syncKey} size={160} level="M" bgColor="#ffffff" fgColor="#000000" />
         </div>
       </div>
 

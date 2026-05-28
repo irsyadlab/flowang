@@ -6,7 +6,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { validateSyncKey, decodeSyncKey } from '@/sync/syncKeyUtils';
 import { useSyncStore } from '@/sync/syncStore';
 import { importKeyFromBase64 } from '@/sync/cryptoService';
-import * as webrtcProvider from '@/sync/webrtcProvider';
+import { connectToSyncRoom } from '@/sync/syncManager';
 
 interface QRScannerProps {
   onClose: () => void;
@@ -16,36 +16,40 @@ export default function QRScanner({ onClose }: QRScannerProps) {
   const [manualKey, setManualKey] = useState('');
   const [error, setError] = useState('');
   const [cameraError, setCameraError] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
   const scannerRef = useRef<{ stop: () => Promise<void>; clear: () => void } | null>(null);
+  const handledRef = useRef(false);
+
+  const stopScanner = useCallback(async () => {
+    if (scannerRef.current) {
+      try {
+        await scannerRef.current.stop();
+        scannerRef.current.clear();
+      } catch {
+        // ignore stop errors
+      }
+      scannerRef.current = null;
+    }
+  }, []);
 
   const handleConnectWithKey = useCallback(async (key: string) => {
+    // Prevent duplicate calls (html5-qrcode fires callback multiple times)
+    if (handledRef.current) return;
+    handledRef.current = true;
+
+    await stopScanner();
+
+    // Save key then connect via syncManager so observers are attached
     useSyncStore.getState().setSyncKey(key);
-    const payload = decodeSyncKey(key);
-    await importKeyFromBase64(payload.encryptionKey);
-    webrtcProvider.connect(payload.roomName, payload.encryptionKey);
+    await importKeyFromBase64(decodeSyncKey(key).encryptionKey);
+    await connectToSyncRoom();
     onClose();
-  }, [onClose]);
+  }, [onClose, stopScanner]);
 
   useEffect(() => {
     let mounted = true;
 
     const startCamera = async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment' },
-        });
-        if (!mounted) {
-          stream.getTracks().forEach((t) => t.stop());
-          return;
-        }
-        streamRef.current = stream;
-
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-
         const { Html5Qrcode } = await import('html5-qrcode');
         if (!mounted) return;
 
@@ -78,15 +82,10 @@ export default function QRScanner({ onClose }: QRScannerProps) {
 
     return () => {
       mounted = false;
-      if (scannerRef.current) {
-        scannerRef.current.stop().catch(() => {});
-        scannerRef.current.clear();
-      }
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((t) => t.stop());
-      }
+      // Fire-and-forget but must call stop() so html5-qrcode releases the camera
+      stopScanner();
     };
-  }, [handleConnectWithKey]);
+  }, [handleConnectWithKey, stopScanner]);
 
   const handleManualSubmit = async () => {
     if (!validateSyncKey(manualKey)) {
@@ -134,12 +133,6 @@ export default function QRScanner({ onClose }: QRScannerProps) {
         <>
           <div className="flex flex-1 items-center justify-center">
             <div id="qr-reader" className="w-full max-w-sm" />
-            <video
-              ref={videoRef}
-              className="hidden"
-              playsInline
-              muted
-            />
           </div>
 
           <div className="space-y-3 p-6">

@@ -11,6 +11,7 @@ import {
   WifiOff,
   Loader2,
   ChevronRight,
+  Monitor,
 } from 'lucide-react';
 import { useSync } from '@/hooks/useSync';
 import { useTheme } from '@/hooks/useTheme';
@@ -24,6 +25,7 @@ import GoogleDriveCard from '@/components/settings/GoogleDriveCard';
 import ThemeCard from '@/components/settings/ThemeCard';
 import OfflineBanner from '@/components/settings/OfflineBanner';
 import { generateSyncKey, encodeSyncKey } from '@/sync/syncKeyUtils';
+import { usePeerCount } from '@/hooks/usePeerCount';
 
 type SheetId = 'sync-key' | 'google-drive' | 'theme' | null;
 
@@ -37,6 +39,7 @@ export default function SettingsPage() {
   const { syncStatus, syncKey, connect } = useSync();
   const { theme } = useTheme();
   const { googleAuthToken, googleUserInfo, lastBackupTimestamp } = useSync();
+  const peerCount = usePeerCount();
   const [openSheet, setOpenSheet] = useState<SheetId>(null);
   const [connecting, setConnecting] = useState(false);
 
@@ -102,7 +105,14 @@ export default function SettingsPage() {
       return (
         <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
           <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
-          Siap Sinkronisasi
+          {peerCount > 0 ? (
+            <span className="flex items-center gap-0.5">
+              <Monitor className="h-3 w-3" />
+              {peerCount} perangkat terhubung
+            </span>
+          ) : (
+            'Siap Sinkronisasi'
+          )}
         </span>
       );
     }

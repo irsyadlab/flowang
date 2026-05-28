@@ -86,10 +86,10 @@ export default function WalletList({ isHidden = false }: WalletListProps) {
         </button>
       </div>
 
-      {/* Draggable horizontal scroll */}
+      {/* Draggable horizontal scroll — bleeds to screen edges, aligned with page padding */}
       <div
         ref={scrollRef}
-        className="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4 snap-x snap-mandatory select-none"
+        className="flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory select-none scroll-smooth"
         style={{ scrollbarWidth: "none", cursor: "grab" }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}

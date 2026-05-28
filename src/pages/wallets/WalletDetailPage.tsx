@@ -1,16 +1,20 @@
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Plus, ArrowLeft, Pencil } from "lucide-react";
+import { Plus, ArrowLeft, Pencil, Trash2 } from "lucide-react";
 import { useWalletStore } from "@/stores/walletStore";
 import { useTransactionStore } from "@/stores/transactionStore";
 import WalletDetailHeader from "@/components/wallets/WalletDetailHeader";
 import WalletTransactionList from "@/components/wallets/WalletTransactionList";
 import ErrorMessage from "@/components/shared/ErrorMessage";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 
 export default function WalletDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const wallets = useWalletStore((s) => s.wallets);
+  const deleteWallet = useWalletStore((s) => s.deleteWallet);
   const transactions = useTransactionStore((s) => s.transactions);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const wallet = wallets.find((w) => w.id === id);
 
@@ -21,6 +25,12 @@ export default function WalletDetailPage() {
   const walletTransactions = transactions.filter(
     (t) => t.walletId === id || t.toWalletId === id
   );
+
+  const handleDelete = async () => {
+    await deleteWallet(wallet.id);
+    setConfirmOpen(false);
+    navigate(-1);
+  };
 
   return (
     <div className="flex flex-col gap-4 p-4 pb-6">
@@ -37,14 +47,24 @@ export default function WalletDetailPage() {
           </button>
           <h1 className="text-lg font-bold text-foreground">{wallet.name}</h1>
         </div>
-        <button
-          type="button"
-          onClick={() => navigate(`/wallets/${id}`)}
-          className="flex h-8 w-8 items-center justify-center rounded-xl bg-muted text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-          aria-label="Edit wallet"
-        >
-          <Pencil className="h-3.5 w-3.5" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => navigate(`/wallets/${id}`)}
+            className="flex h-8 w-8 items-center justify-center rounded-xl bg-muted text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+            aria-label="Edit wallet"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setConfirmOpen(true)}
+            className="flex h-8 w-8 items-center justify-center rounded-xl bg-muted text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+            aria-label="Hapus wallet"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
       </div>
 
       <WalletDetailHeader wallet={wallet} transactions={walletTransactions} />
@@ -59,6 +79,14 @@ export default function WalletDetailPage() {
       </button>
 
       <WalletTransactionList walletId={id!} />
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Hapus Wallet"
+        description="Yakin ingin menghapus wallet ini? Wallet yang memiliki transaksi tidak dapat dihapus."
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

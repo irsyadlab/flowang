@@ -20,7 +20,7 @@ export default function WalletDetailHeader({ wallet, transactions }: WalletDetai
   const netBalance = totalIncome - totalExpense;
 
   return (
-    <div className="hero-card noise-overlay rounded-2xl p-5 text-white shadow-xl shadow-primary/20">
+    <div className="hero-card noise-overlay rounded-2xl p-5 text-white shadow-[0_4px_16px_rgba(0,0,0,0.35)]">
       <p className="text-[10px] text-white/50 uppercase tracking-widest mb-1">Saldo Wallet</p>
       <p className="text-3xl font-bold tracking-tight mb-1" style={{ fontFamily: "'DM Serif Display', serif" }}>
         {formatCurrency(wallet.balance)}

@@ -28,10 +28,6 @@ export default function WalletTransactionList({ walletId }: WalletTransactionLis
         icon={ArrowLeftRight}
         title="Belum ada transaksi"
         description="Transaksi yang melibatkan wallet ini akan muncul di sini."
-        action={{
-          label: "Tambah Transaksi",
-          onClick: () => navigate(`/transactions/new?walletId=${walletId}`),
-        }}
       />
     );
   }

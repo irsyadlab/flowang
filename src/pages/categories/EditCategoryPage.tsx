@@ -39,6 +39,7 @@ export default function EditCategoryPage() {
       <h1 className="text-lg font-semibold">Edit Kategori</h1>
       <CategoryForm
         initialData={{ name: category.name, type: category.type }}
+        excludeId={category.id}
         onSubmit={handleSubmit}
         submitLabel="Simpan Perubahan"
       />

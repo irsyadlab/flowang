@@ -43,6 +43,29 @@ export async function getTransactionsByWalletId(db: IDBDatabase, walletId: strin
   return requestToPromise(request);
 }
 
+// Add wallet update + correction transaction atomically
+export async function addTransactionWithWalletUpdate(
+  db: IDBDatabase,
+  walletData: { id: string; balance: number; initialBalance: number; updatedAt: string },
+  correctionTx: Transaction
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(['transactions', 'wallets'], 'readwrite');
+    const txStore = tx.objectStore('transactions');
+    const walletStore = tx.objectStore('wallets');
+
+    // Add correction transaction
+    txStore.add(correctionTx);
+
+    // Update wallet
+    walletStore.put(walletData);
+
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(new Error('Transaction aborted'));
+  });
+}
+
 // Add transaction dengan atomic wallet balance update
 export async function addTransaction(
   db: IDBDatabase,

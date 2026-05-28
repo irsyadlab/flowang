@@ -50,6 +50,10 @@ function calculateWalletUpdates(
     } else if (transaction.type === 'transfer' && transaction.toWalletId) {
       updates.push({ walletId: transaction.walletId, delta: -transaction.amount });
       updates.push({ walletId: transaction.toWalletId, delta: transaction.amount });
+    } else if (transaction.type === 'adjustment_increase') {
+      updates.push({ walletId: transaction.walletId, delta: transaction.amount });
+    } else if (transaction.type === 'adjustment_decrease') {
+      updates.push({ walletId: transaction.walletId, delta: -transaction.amount });
     }
   }
 
@@ -156,6 +160,11 @@ export const useTransactionStore = create<TransactionState & TransactionActions>
       
       const existing = get().transactions.find((t) => t.id === id);
       if (!existing) throw new Error('Transaction not found');
+      
+      if (existing.isCorrection) {
+        set({ error: 'Transaksi koreksi tidak dapat dihapus', isLoading: false });
+        return;
+      }
       
       // Reverse wallet effects
       const walletUpdates = calculateWalletUpdates(existing).map((u) => ({

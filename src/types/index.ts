@@ -1,4 +1,4 @@
-export type TransactionType = 'income' | 'expense' | 'transfer';
+export type TransactionType = 'income' | 'expense' | 'transfer' | 'adjustment_increase' | 'adjustment_decrease';
 export type CategoryType = 'income' | 'expense' | 'both';
 
 export interface Wallet {
@@ -27,6 +27,7 @@ export interface Transaction {
   categoryId?: string;  // FK → Category.id (wajib untuk income/expense)
   date: string;         // ISO 8601 date string (YYYY-MM-DD)
   note?: string;
+  isCorrection?: boolean; // true untuk transaksi koreksi saldo
   createdAt: string;    // ISO 8601
   updatedAt: string;    // ISO 8601
 }

@@ -1,8 +1,8 @@
 import { create } from 'zustand';
-import type { Wallet } from '../types';
+import type { Wallet, Transaction } from '../types';
 import * as walletDb from '../db/walletDb';
 import { getDB } from '../db/db';
-import { getAllTransactions } from '../db/transactionDb';
+import { getAllTransactions, addTransactionWithWalletUpdate } from '../db/transactionDb';
 import { useUIStore } from './uiStore';
 
 interface WalletState {
@@ -78,17 +78,61 @@ export const useWalletStore = create<WalletState & WalletActions>((set, get) => 
       const existing = get().wallets.find((w) => w.id === id);
       if (!existing) throw new Error('Wallet not found');
       
-      const updated: Wallet = {
-        ...existing,
-        ...data,
-        updatedAt: new Date().toISOString(),
-      };
+      const balanceChanged = data.initialBalance !== undefined && data.initialBalance !== existing.initialBalance;
       
-      await walletDb.updateWallet(db, updated);
-      set((state) => ({
-        wallets: state.wallets.map((w) => (w.id === id ? updated : w)),
-        isLoading: false,
-      }));
+      if (balanceChanged) {
+        const oldBalance = existing.initialBalance;
+        const newBalance = data.initialBalance!;
+        const delta = newBalance - oldBalance;
+        const today = new Date().toISOString().split('T')[0];
+        const now = new Date().toISOString();
+        
+        const correctionTx: Transaction = {
+          id: crypto.randomUUID(),
+          type: delta > 0 ? 'adjustment_increase' : 'adjustment_decrease',
+          amount: Math.abs(delta),
+          walletId: id,
+          date: today,
+          note: `Koreksi saldo: ${existing.name}`,
+          isCorrection: true,
+          createdAt: now,
+          updatedAt: now,
+        };
+        
+        const updatedWallet: Wallet = {
+          ...existing,
+          ...data,
+          balance: existing.balance + delta,
+          updatedAt: now,
+        };
+        
+        await addTransactionWithWalletUpdate(db, updatedWallet, correctionTx);
+        
+        // Reload both wallets and transactions
+        const [wallets, transactions] = await Promise.all([
+          walletDb.getAllWallets(db),
+          getAllTransactions(db),
+        ]);
+        set({
+          wallets,
+          isLoading: false,
+        });
+        // Update transaction store too
+        const { useTransactionStore } = await import('./transactionStore');
+        useTransactionStore.setState({ transactions });
+      } else {
+        const updated: Wallet = {
+          ...existing,
+          ...data,
+          updatedAt: new Date().toISOString(),
+        };
+        
+        await walletDb.updateWallet(db, updated);
+        set((state) => ({
+          wallets: state.wallets.map((w) => (w.id === id ? updated : w)),
+          isLoading: false,
+        }));
+      }
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
     }
@@ -138,9 +182,9 @@ export const useWalletStore = create<WalletState & WalletActions>((set, get) => 
       let balanceDelta = 0;
       for (const t of allTransactions) {
         if (t.walletId === walletId) {
-          if (t.type === 'income') {
+          if (t.type === 'income' || t.type === 'adjustment_increase') {
             balanceDelta += t.amount;
-          } else if (t.type === 'expense') {
+          } else if (t.type === 'expense' || t.type === 'adjustment_decrease') {
             balanceDelta -= t.amount;
           } else if (t.type === 'transfer') {
             balanceDelta -= t.amount;

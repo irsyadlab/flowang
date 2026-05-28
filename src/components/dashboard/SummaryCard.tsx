@@ -22,6 +22,7 @@ export default function SummaryCard() {
     let expense = 0;
     for (const t of transactions) {
       if (t.date < monthStart || t.date > today) continue;
+      if (t.isCorrection) continue;
       if (t.type === "income") income += t.amount;
       else if (t.type === "expense") expense += t.amount;
     }

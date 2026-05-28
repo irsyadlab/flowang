@@ -397,6 +397,71 @@ Stack: React 19, React Router v7, Tailwind CSS v4, shadcn/ui, Zustand, IndexedDB
     - *For any* wallet id, daftar transaksi yang ditampilkan harus mencakup semua dan hanya transaksi dengan `walletId === id` ATAU `toWalletId === id`
     - **Validates: Requirements 10.3**
 
+- [x] 15. Balance Correction
+  - [x] 15.1 Update `src/types/index.ts`
+    - Tambahkan `'adjustment_increase'` dan `'adjustment_decrease'` ke `TransactionType`
+    - Tambahkan field `isCorrection?: boolean` ke interface `Transaction`
+    - _Requirements: 11.4_
+
+  - [x] 15.2 Update `src/db/transactionDb.ts`
+    - Tambahkan fungsi `addTransactionWithWalletUpdate(db, walletData, correctionTx)` yang menyimpan update wallet dan transaksi koreksi dalam satu IDBTransaction atomik
+    - Fungsi ini digunakan oleh `walletStore.updateWallet` ketika `initialBalance` berubah
+    - _Requirements: 11.1, 11.9_
+
+  - [x] 15.3 Update `src/stores/walletStore.ts` — action `updateWallet`
+    - Deteksi apakah `initialBalance` berubah dengan membandingkan nilai baru vs lama
+    - Jika berubah: hitung delta, buat objek `correctionTx` dengan tipe `adjustment_increase`/`adjustment_decrease`, `isCorrection: true`, note otomatis "Koreksi saldo: [nama wallet]", date hari ini
+    - Panggil `transactionDb.addTransactionWithWalletUpdate(db, walletData, correctionTx)` dalam satu IDBTransaction
+    - Jika tidak berubah: panggil `walletDb.updateWallet()` biasa (hanya update nama)
+    - Setelah berhasil, reload `wallets` dan `transactions` di store
+    - _Requirements: 11.1, 11.2, 11.3, 11.9, 11.10_
+
+  - [x] 15.4 Update `src/components/transactions/TransactionItem.tsx`
+    - Tambahkan kondisi: jika `transaction.isCorrection === true`, tampilkan badge/label "Koreksi Saldo" dan sembunyikan tombol edit dan hapus
+    - Tampilkan indikator visual berbeda (warna/ikon) untuk membedakan dari transaksi biasa
+    - _Requirements: 11.5, 11.6, 11.7_
+
+  - [x] 15.5 Update `src/stores/transactionStore.ts` — actions `updateTransaction` dan `deleteTransaction`
+    - Tambahkan guard: jika `transaction.isCorrection === true`, set error "Transaksi koreksi tidak dapat diubah" dan return early tanpa melakukan operasi
+    - _Requirements: 11.6, 11.7_
+
+  - [x] 15.6 Update `src/lib/reportEngine.ts` — fungsi `calculateSummary()`
+    - Tambahkan filter: kecualikan transaksi dengan `isCorrection === true` dari perhitungan `totalIncome` dan `totalExpense` (selain `transfer` yang sudah dikecualikan)
+    - _Requirements: 11.8_
+
+  - [x] 15.7 Update `src/components/dashboard/SummaryCard.tsx`
+    - Pastikan kalkulasi total Income dan Expense bulan berjalan mengecualikan `isCorrection === true`
+    - _Requirements: 11.8_
+
+  - [x]* 15.8 Tulis property test untuk Balance Correction Atomicity (Property 17) di `src/__tests__/stores/walletStore.test.ts`
+    - **Property 17: Balance Correction Atomicity**
+    - *For any* perubahan initialBalance dari A ke B (A ≠ B): wallet.initialBalance = B, tepat satu Balance_Correction tersimpan dengan amount = |B-A|, wallet.balance mencerminkan perubahan. Jika gagal, tidak ada perubahan parsial.
+    - **Validates: Requirements 11.1, 11.2, 11.3, 11.9**
+
+  - [x]* 15.9 Tulis property test untuk Balance Correction Exclusion (Property 18) di `src/__tests__/lib/reportEngine.test.ts`
+    - **Property 18: Balance Correction Exclusion**
+    - *For any* kumpulan transaksi yang mencakup Balance_Correction, total Income dan Expense di semua laporan tidak menyertakan jumlah Balance_Correction.
+    - **Validates: Requirements 11.8**
+
+- [x] 16. Edit Wallet — Tampilkan Saldo Sekarang
+  - [x] 16.1 Update `src/components/wallets/WalletForm.tsx`
+    - Pada mode edit (bukan create), ganti field `initialBalance` dengan field `balance` (saldo sekarang)
+    - Label field berubah dari "Saldo Awal" menjadi "Saldo Sekarang"
+    - Pre-fill nilai field dengan `wallet.balance` (bukan `wallet.initialBalance`)
+    - Sembunyikan field `initialBalance` sepenuhnya pada mode edit
+    - _Requirements: 2.3_
+
+  - [x] 16.2 Update `src/stores/walletStore.ts` — action `updateWallet`
+    - Ketika pengguna menyimpan edit wallet dengan nilai `balance` baru, hitung `newInitialBalance` yang diperlukan agar saldo akhir sesuai: `newInitialBalance = newBalance - Σ(semua transaksi terkait wallet)`
+    - Gunakan nilai `newInitialBalance` yang dihitung ini (bukan nilai yang diinput langsung) sebagai `initialBalance` baru wallet
+    - Logika Balance_Correction tetap berjalan berdasarkan selisih `newInitialBalance` vs `oldInitialBalance`
+    - _Requirements: 2.3, 2.4, 11.1_
+
+  - [x] 16.3 Update `src/pages/wallets/EditWalletPage.tsx`
+    - Pastikan `WalletForm` menerima prop `mode="edit"` dan `currentBalance={wallet.balance}` agar form tahu harus menampilkan saldo sekarang
+    - Teruskan `wallet.initialBalance` sebagai `oldInitialBalance` ke action `updateWallet` untuk kalkulasi Balance_Correction
+    - _Requirements: 2.3, 2.4_
+
 ---
 
 ## Notes
@@ -434,7 +499,13 @@ Stack: React 19, React Router v7, Tailwind CSS v4, shadcn/ui, Zustand, IndexedDB
     { "id": 13, "tasks": ["12.4", "12.5", "12.6", "12.7", "12.8", "12.9", "12.10", "12.11", "12.12", "12.13", "12.14"] },
     { "id": 14, "tasks": ["14.1", "14.2", "14.3", "14.4", "14.5"] },
     { "id": 15, "tasks": ["14.6"] },
-    { "id": 16, "tasks": ["14.7"] }
+    { "id": 16, "tasks": ["14.7"] },
+    { "id": 17, "tasks": ["15.1"] },
+    { "id": 18, "tasks": ["15.2"] },
+    { "id": 19, "tasks": ["15.3", "15.4", "15.5", "15.6", "15.7"] },
+    { "id": 20, "tasks": ["15.8", "15.9"] },
+    { "id": 21, "tasks": ["16.1", "16.3"] },
+    { "id": 22, "tasks": ["16.2"] }
   ]
 }
 ```

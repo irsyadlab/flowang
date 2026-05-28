@@ -4,12 +4,12 @@ import { useWalletStore } from "@/stores/walletStore";
 import WalletForm from "@/components/wallets/WalletForm";
 import ErrorMessage from "@/components/shared/ErrorMessage";
 import LoadingSpinner from "@/components/shared/LoadingSpinner";
-import type { WalletInput } from "@/lib/validators";
+import type { WalletEditInput } from "@/lib/validators";
 
 export default function EditWalletPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { wallets, isLoading, loadWallets, updateWallet, recalculateBalance } = useWalletStore();
+  const { wallets, isLoading, loadWallets, updateWallet } = useWalletStore();
 
   useEffect(() => {
     if (wallets.length === 0) loadWallets();
@@ -29,9 +29,11 @@ export default function EditWalletPage() {
     );
   }
 
-  const handleSubmit = async (data: WalletInput) => {
-    await updateWallet(wallet.id, data);
-    await recalculateBalance(wallet.id);
+  const handleSubmit = async (data: WalletEditInput) => {
+    // Convert desired balance to initialBalance for the store's correction logic:
+    // newInitialBalance = currentInitialBalance + (desiredBalance - currentBalance)
+    const newInitialBalance = wallet.initialBalance + (data.balance - wallet.balance);
+    await updateWallet(wallet.id, { name: data.name, initialBalance: newInitialBalance });
     navigate("/wallets");
   };
 
@@ -39,7 +41,10 @@ export default function EditWalletPage() {
     <div className="flex flex-col gap-4 p-4">
       <h1 className="text-lg font-semibold">Edit Wallet</h1>
       <WalletForm
-        initialData={{ name: wallet.name, initialBalance: wallet.initialBalance }}
+        mode="edit"
+        initialData={{ name: wallet.name }}
+        currentBalance={wallet.balance}
+        excludeId={wallet.id}
         onSubmit={handleSubmit}
         submitLabel="Simpan Perubahan"
       />

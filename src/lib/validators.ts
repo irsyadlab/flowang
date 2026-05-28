@@ -8,6 +8,14 @@ export const walletSchema = z.object({
     .min(0, 'Saldo awal tidak boleh negatif'),
 });
 
+export const walletEditSchema = z.object({
+  name: z.string()
+    .min(1, 'Nama wallet wajib diisi')
+    .max(50, 'Nama wallet maksimal 50 karakter'),
+  balance: z.number()
+    .min(0, 'Saldo tidak boleh negatif'),
+});
+
 export const categorySchema = z.object({
   name: z.string()
     .min(1, 'Nama kategori wajib diisi')
@@ -41,5 +49,6 @@ export const transactionSchema = z.object({
 
 // Type exports untuk use di form
 export type WalletInput = z.infer<typeof walletSchema>;
+export type WalletEditInput = z.infer<typeof walletEditSchema>;
 export type CategoryInput = z.infer<typeof categorySchema>;
 export type TransactionInput = z.infer<typeof transactionSchema>;

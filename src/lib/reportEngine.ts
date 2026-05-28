@@ -25,12 +25,13 @@ export function filterByDateRange(
   });
 }
 
-// Hitung summary (Transfer dikecualikan dari income/expense)
+// Hitung summary (Transfer dan Koreksi Saldo dikecualikan dari income/expense)
 export function calculateSummary(transactions: Transaction[]): ReportSummary {
   let totalIncome = 0;
   let totalExpense = 0;
 
   for (const tx of transactions) {
+    if (tx.isCorrection) continue;
     if (tx.type === 'income') {
       totalIncome += tx.amount;
     } else if (tx.type === 'expense') {
@@ -51,8 +52,8 @@ export function groupByMonth(transactions: Transaction[]): MonthlyReportRow[] {
   const monthlyMap = new Map<string, MonthlyReportRow>();
 
   for (const tx of transactions) {
-    // Skip transfer
-    if (tx.type === 'transfer') continue;
+    // Skip transfer dan koreksi saldo
+    if (tx.type === 'transfer' || tx.isCorrection) continue;
 
     const date = new Date(tx.date);
     const key = `${date.getFullYear()}-${date.getMonth()}`;

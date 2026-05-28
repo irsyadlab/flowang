@@ -28,6 +28,7 @@ Flowang adalah aplikasi pencatatan keuangan personal berbasis web dengan pendeka
 - **Report_Page**: Halaman laporan dengan tiga tab: Realtime, Bulanan, dan Custom.
 - **Bottom_Navigation**: Navigasi utama aplikasi yang terletak di bagian bawah layar.
 - **Wallet_Detail_Page**: Halaman yang menampilkan informasi detail wallet beserta daftar transaksi yang terkait dengan wallet tersebut.
+- **Balance_Correction**: Transaksi koreksi saldo yang dibuat otomatis oleh sistem ketika pengguna mengubah `initialBalance` wallet. Transaksi ini bersifat read-only dan tidak dapat diedit atau dihapus secara manual.
 
 ---
 
@@ -203,3 +204,22 @@ Flowang adalah aplikasi pencatatan keuangan personal berbasis web dengan pendeka
 6. WHEN pengguna mengklik transaksi di Wallet_Detail_Page, THE App SHALL mengarahkan pengguna ke halaman edit transaksi tersebut.
 7. THE Wallet_Detail_Page SHALL menyediakan tombol untuk menambah transaksi baru yang sudah pre-filled dengan wallet tersebut sebagai wallet sumber.
 8. WHILE data transaksi sedang dimuat, THE Wallet_Detail_Page SHALL menampilkan indikator loading.
+
+---
+
+### Requirement 11: Koreksi Saldo Wallet
+
+**User Story:** Sebagai pengguna, saya ingin perubahan saldo awal wallet tercatat sebagai transaksi koreksi secara otomatis, sehingga saya dapat melacak riwayat penyesuaian saldo dan audit trail tetap terjaga.
+
+#### Acceptance Criteria
+
+1. WHEN pengguna menyimpan perubahan `initialBalance` wallet dan nilai baru berbeda dari nilai lama, THE Wallet_Manager SHALL secara otomatis membuat satu transaksi Balance_Correction pada wallet tersebut dengan jumlah sebesar selisih absolut antara `initialBalance` baru dan `initialBalance` lama, tanpa memerlukan input tambahan dari pengguna.
+2. WHEN selisih `initialBalance` baru dikurangi `initialBalance` lama bernilai positif, THE Wallet_Manager SHALL membuat Balance_Correction bertipe `adjustment_increase` yang menambah saldo wallet sebesar selisih tersebut.
+3. WHEN selisih `initialBalance` baru dikurangi `initialBalance` lama bernilai negatif, THE Wallet_Manager SHALL membuat Balance_Correction bertipe `adjustment_decrease` yang mengurangi saldo wallet sebesar nilai absolut selisih tersebut.
+4. THE Balance_Correction SHALL disimpan dengan field: id (UUID), type (`adjustment_increase` atau `adjustment_decrease`), amount (selisih absolut), walletId, date (tanggal hari ini), note otomatis berisi "Koreksi saldo: [nama wallet]", isCorrection: true, createdAt, updatedAt.
+5. THE Balance_Correction SHALL ditampilkan dalam daftar transaksi (riwayat, wallet detail) dengan label "Koreksi Saldo" dan indikator visual yang membedakannya dari transaksi biasa.
+6. THE Balance_Correction SHALL bersifat read-only — pengguna tidak dapat mengedit atau menghapus transaksi koreksi secara manual.
+7. IF pengguna mencoba mengedit atau menghapus Balance_Correction, THEN THE Transaction_Manager SHALL menolak operasi tersebut dan menampilkan pesan bahwa transaksi koreksi tidak dapat diubah.
+8. THE Balance_Correction SHALL dikecualikan dari perhitungan total Income dan total Expense di Dashboard, laporan Realtime, Bulanan, dan Custom.
+9. WHEN pembuatan Balance_Correction gagal disimpan ke Storage, THEN THE Wallet_Manager SHALL membatalkan seluruh operasi edit wallet (termasuk perubahan `initialBalance`) sehingga tidak ada perubahan parsial yang tersimpan.
+10. WHEN `initialBalance` wallet diubah ke nilai yang sama dengan nilai sebelumnya, THE Wallet_Manager SHALL tidak membuat Balance_Correction.

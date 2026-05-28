@@ -9,11 +9,12 @@ import { Button } from "@/components/ui/button";
 
 interface CategoryFormProps {
   initialData?: CategoryInput;
+  excludeId?: string;
   onSubmit: (data: CategoryInput) => Promise<void>;
   submitLabel?: string;
 }
 
-export default function CategoryForm({ initialData, onSubmit, submitLabel = "Simpan" }: CategoryFormProps) {
+export default function CategoryForm({ initialData, excludeId, onSubmit, submitLabel = "Simpan" }: CategoryFormProps) {
   const categories = useCategoryStore((s) => s.categories);
 
   const form = useForm<CategoryInput>({
@@ -26,7 +27,7 @@ export default function CategoryForm({ initialData, onSubmit, submitLabel = "Sim
 
   const handleSubmit = form.handleSubmit(async (data) => {
     const isDuplicate = categories.some(
-      (c) => c.name.toLowerCase() === data.name.toLowerCase() && c.type === data.type
+      (c) => c.id !== excludeId && c.name.toLowerCase() === data.name.toLowerCase() && c.type === data.type
     );
     if (isDuplicate) {
       form.setError("name", { message: "Nama kategori sudah digunakan untuk tipe ini" });

@@ -267,6 +267,12 @@ TransactionForm
 
 Visibilitas field dikontrol oleh `watch('type')` dari React Hook Form.
 
+### TransactionItem
+
+Komponen untuk menampilkan satu baris transaksi dalam daftar. Jika `transaction.isCorrection === true`:
+- Menampilkan badge **"Koreksi Saldo"** sebagai indikator visual yang membedakannya dari transaksi biasa.
+- **Menyembunyikan tombol edit dan hapus** — Balance_Correction bersifat read-only dan tidak dapat dimodifikasi secara manual.
+
 ---
 
 ## Data Models
@@ -276,7 +282,7 @@ Visibilitas field dikontrol oleh `watch('type')` dari React Hook Form.
 ```typescript
 // src/types/index.ts
 
-export type TransactionType = 'income' | 'expense' | 'transfer';
+export type TransactionType = 'income' | 'expense' | 'transfer' | 'adjustment_increase' | 'adjustment_decrease';
 export type CategoryType = 'income' | 'expense' | 'both';
 
 export interface Wallet {
@@ -305,6 +311,7 @@ export interface Transaction {
   categoryId?: string;  // FK → Category.id (wajib untuk income/expense)
   date: string;         // ISO 8601 date string (YYYY-MM-DD)
   note?: string;
+  isCorrection?: boolean; // true untuk Balance_Correction, undefined/false untuk transaksi biasa
   createdAt: string;    // ISO 8601
   updatedAt: string;    // ISO 8601
 }
@@ -353,6 +360,16 @@ export const transactionSchema = z.object({
     }
   }
 });
+
+// Schema internal untuk Balance_Correction (tidak diekspos ke form pengguna)
+export const correctionTransactionSchema = z.object({
+  type: z.enum(['adjustment_increase', 'adjustment_decrease']),
+  amount: z.number().gt(0),
+  walletId: z.string().min(1),
+  date: z.string().min(1),
+  note: z.string(),
+  isCorrection: z.literal(true),
+});
 ```
 
 ### Zustand Store Interfaces
@@ -365,7 +382,9 @@ interface WalletStore {
   error: string | null;
   loadWallets: () => Promise<void>;
   addWallet: (data: Omit<Wallet, 'id' | 'balance' | 'createdAt' | 'updatedAt'>) => Promise<void>;
-  updateWallet: (id: string, data: Partial<Wallet>) => Promise<void>;
+  updateWallet: (id: string, data: Partial<Wallet>, oldInitialBalance?: number) => Promise<void>;
+  // Jika data.initialBalance !== oldInitialBalance, updateWallet secara otomatis membuat
+  // Balance_Correction dan menyimpannya bersama perubahan wallet dalam satu IDBTransaction atomik.
   deleteWallet: (id: string) => Promise<void>;
   recalculateBalance: (walletId: string) => Promise<void>;
 }
@@ -582,6 +601,35 @@ transactionDb.deleteTransaction(db, id, walletUpdates)
         └─ FAILURE → rollback otomatis
 ```
 
+### Alur: Edit Wallet dengan Balance Correction
+
+```
+User submits WalletForm (edit)
+        │
+        ▼
+walletStore.updateWallet(id, newData, oldInitialBalance)
+        │
+        ├─ Jika newData.initialBalance !== oldInitialBalance:
+        │    delta = newData.initialBalance - oldInitialBalance
+        │    Buat correctionTx: {
+        │      type: delta > 0 ? 'adjustment_increase' : 'adjustment_decrease',
+        │      amount: Math.abs(delta),
+        │      walletId: id,
+        │      date: today,
+        │      note: 'Koreksi saldo: [nama wallet]',
+        │      isCorrection: true
+        │    }
+        │
+        ▼
+walletDb.updateWalletWithCorrection(db, walletData, correctionTx?)
+        │  (satu IDBTransaction: 'wallets' + 'transactions')
+        │  Jika correctionTx ada: simpan wallet + simpan correctionTx + update balance
+        │  Jika tidak ada: hanya update wallet (nama saja)
+        │
+        ├─ SUCCESS → reload wallets + transactions
+        └─ FAILURE → rollback otomatis (tidak ada perubahan parsial)
+```
+
 ### Report Engine (`src/lib/reportEngine.ts`)
 
 Report Engine beroperasi murni di memori — mengambil array `Transaction[]` dari store dan menghitung agregasi tanpa query tambahan ke IndexedDB.
@@ -614,7 +662,7 @@ function calculateSummary(transactions: Transaction[]): ReportSummary
 function groupByMonth(transactions: Transaction[]): MonthlyReportRow[]
 ```
 
-**Aturan penting**: Transaksi bertipe `transfer` **tidak dihitung** dalam total Income maupun total Expense di semua laporan.
+**Aturan penting**: Transaksi bertipe `transfer` **tidak dihitung** dalam total Income maupun total Expense di semua laporan. Demikian pula, transaksi dengan `isCorrection === true` (Balance_Correction) **tidak dihitung** dalam total Income maupun total Expense — `calculateSummary()` harus mengecualikan keduanya sebelum melakukan agregasi.
 
 ---
 
@@ -793,6 +841,22 @@ Sebelum `deleteCategory`, store mengecek:
 
 ---
 
+### Property 17: Balance Correction Atomicity
+
+*For any* perubahan `initialBalance` wallet dari nilai A ke nilai B (A ≠ B), setelah operasi selesai: (1) `wallet.initialBalance` harus sama dengan B, (2) tepat satu Balance_Correction harus tersimpan dengan `amount = |B - A|` dan `type = 'adjustment_increase'` jika B > A atau `type = 'adjustment_decrease'` jika B < A, dan (3) `wallet.balance` harus mencerminkan perubahan tersebut. Jika operasi gagal di tengah jalan, tidak ada perubahan parsial yang tersimpan — baik `initialBalance` wallet maupun Balance_Correction harus kembali ke kondisi sebelum operasi.
+
+**Validates: Requirements 11.1, 11.2, 11.3, 11.9**
+
+---
+
+### Property 18: Balance Correction Exclusion
+
+*For any* kumpulan transaksi yang mencakup satu atau lebih Balance_Correction (`isCorrection === true`), total Income dan total Expense yang dihitung oleh `calculateSummary()` — dan yang ditampilkan di Dashboard, laporan Realtime, Bulanan, maupun Custom — harus tidak menyertakan jumlah (`amount`) dari transaksi Balance_Correction tersebut.
+
+**Validates: Requirements 11.8**
+
+---
+
 ## Testing Strategy
 
 ### Dual Testing Approach
@@ -826,10 +890,21 @@ src/
     │   ├── transactionDb.test.ts  # Property 3, 4, 5, 6, 7
     │   └── categoryDb.test.ts     # Property 9
     ├── stores/
-    │   ├── walletStore.test.ts    # Property 2, 14
+    │   ├── walletStore.test.ts    # Property 2, 14, 17, 18
+    │   │                          # Property 17: Balance Correction Atomicity
+    │   │                          #   — verifikasi wallet.initialBalance, tepat satu
+    │   │                          #     Balance_Correction tersimpan, wallet.balance
+    │   │                          #     diperbarui, dan rollback jika gagal
+    │   │                          # Property 18: Balance Correction Exclusion
+    │   │                          #   — verifikasi calculateSummary() mengecualikan
+    │   │                          #     transaksi dengan isCorrection === true
     │   └── transactionStore.test.ts # Property 10, 13
     ├── lib/
-    │   ├── reportEngine.test.ts   # Property 11, 12
+    │   ├── reportEngine.test.ts   # Property 11, 12, 18
+    │   │                          # Property 18: Balance Correction Exclusion
+    │   │                          #   — verifikasi reportEngine.calculateSummary()
+    │   │                          #     mengecualikan Balance_Correction dari
+    │   │                          #     total Income dan Expense di semua laporan
     │   ├── validators.test.ts     # Property 15, edge cases
     │   └── walletTransactionFilter.test.ts  # Property 16
     └── integration/

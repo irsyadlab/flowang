@@ -7,9 +7,9 @@
 
 // Required environment variables that MUST be defined at startup
 const REQUIRED_VARS = [
-  'VITE_WEBRTC_SIGNALING_URL',
-  'VITE_GOOGLE_CLIENT_ID',
-  'VITE_GOOGLE_API_KEY',
+  'BUN_PUBLIC_WEBRTC_SIGNALING_URL',
+  'BUN_PUBLIC_GOOGLE_CLIENT_ID',
+  'BUN_PUBLIC_GOOGLE_API_KEY',
 ] as const;
 
 // Optional environment variables for STUN/TURN configuration
@@ -43,10 +43,25 @@ export class EnvConfigError extends Error {
 }
 
 /**
- * Get a value from import.meta.env, returning undefined if not set
+ * Static env map — Bun inlines BUN_PUBLIC_* via process.env at bundle time.
+ * Using process.env directly since import.meta.env is not available
+ * in Bun's HTML bundler mode (browser target).
+ */
+const ENV_MAP: Record<string, string | undefined> = {
+  BUN_PUBLIC_WEBRTC_SIGNALING_URL: process.env.BUN_PUBLIC_WEBRTC_SIGNALING_URL,
+  BUN_PUBLIC_GOOGLE_CLIENT_ID: process.env.BUN_PUBLIC_GOOGLE_CLIENT_ID,
+  BUN_PUBLIC_GOOGLE_API_KEY: process.env.BUN_PUBLIC_GOOGLE_API_KEY,
+  BUN_PUBLIC_STUN_URL: process.env.BUN_PUBLIC_STUN_URL,
+  BUN_PUBLIC_TURN_URL: process.env.BUN_PUBLIC_TURN_URL,
+  BUN_PUBLIC_TURN_USERNAME: process.env.BUN_PUBLIC_TURN_USERNAME,
+  BUN_PUBLIC_TURN_CREDENTIAL: process.env.BUN_PUBLIC_TURN_CREDENTIAL,
+};
+
+/**
+ * Get a value from the static env map
  */
 function getEnvVar(name: string): string | undefined {
-  return import.meta.env[name] as string | undefined;
+  return ENV_MAP[name];
 }
 
 /**
@@ -72,9 +87,9 @@ export function getMissingRequiredVars(): string[] {
  * @returns Array with error message if invalid, empty array if valid
  */
 export function validateTurnConfig(): string[] {
-  const turnUrl = getEnvVar('VITE_TURN_URL');
-  const turnUsername = getEnvVar('VITE_TURN_USERNAME');
-  const turnCredential = getEnvVar('VITE_TURN_CREDENTIAL');
+  const turnUrl = getEnvVar('BUN_PUBLIC_TURN_URL');
+  const turnUsername = getEnvVar('BUN_PUBLIC_TURN_USERNAME');
+  const turnCredential = getEnvVar('BUN_PUBLIC_TURN_CREDENTIAL');
   
   const hasUrl = turnUrl && turnUrl.trim() !== '';
   const hasUsername = turnUsername && turnUsername.trim() !== '';
@@ -90,9 +105,9 @@ export function validateTurnConfig(): string[] {
   
   // Partial configuration - invalid
   const missing: string[] = [];
-  if (!hasUrl) missing.push('VITE_TURN_URL');
-  if (!hasUsername) missing.push('VITE_TURN_USERNAME');
-  if (!hasCredential) missing.push('VITE_TURN_CREDENTIAL');
+  if (!hasUrl) missing.push('BUN_PUBLIC_TURN_URL');
+  if (!hasUsername) missing.push('BUN_PUBLIC_TURN_USERNAME');
+  if (!hasCredential) missing.push('BUN_PUBLIC_TURN_CREDENTIAL');
   
   return [`Partial TURN configuration - missing: ${missing.join(', ')}`];
 }
@@ -122,7 +137,7 @@ export function getIceServers(): RTCIceServer[] {
   const servers: RTCIceServer[] = [];
   
   // Add STUN server if defined
-  const stunUrl = getEnvVar('VITE_STUN_URL');
+  const stunUrl = getEnvVar('BUN_PUBLIC_STUN_URL');
   if (stunUrl && stunUrl.trim() !== '') {
     servers.push({
       urls: stunUrl.trim(),
@@ -130,9 +145,9 @@ export function getIceServers(): RTCIceServer[] {
   }
   
   // Add TURN server if ALL TURN variables are defined
-  const turnUrl = getEnvVar('VITE_TURN_URL');
-  const turnUsername = getEnvVar('VITE_TURN_USERNAME');
-  const turnCredential = getEnvVar('VITE_TURN_CREDENTIAL');
+  const turnUrl = getEnvVar('BUN_PUBLIC_TURN_URL');
+  const turnUsername = getEnvVar('BUN_PUBLIC_TURN_USERNAME');
+  const turnCredential = getEnvVar('BUN_PUBLIC_TURN_CREDENTIAL');
   
   if (
     turnUrl && turnUrl.trim() !== '' &&
@@ -157,13 +172,13 @@ function createEnvConfig(): EnvConfig {
   validateEnvConfig();
   
   return {
-    signalingUrl: getEnvVar('VITE_WEBRTC_SIGNALING_URL')!,
-    googleClientId: getEnvVar('VITE_GOOGLE_CLIENT_ID')!,
-    googleApiKey: getEnvVar('VITE_GOOGLE_API_KEY')!,
-    stunUrl: getEnvVar('VITE_STUN_URL'),
-    turnUrl: getEnvVar('VITE_TURN_URL'),
-    turnUsername: getEnvVar('VITE_TURN_USERNAME'),
-    turnCredential: getEnvVar('VITE_TURN_CREDENTIAL'),
+    signalingUrl: getEnvVar('BUN_PUBLIC_WEBRTC_SIGNALING_URL')!,
+    googleClientId: getEnvVar('BUN_PUBLIC_GOOGLE_CLIENT_ID')!,
+    googleApiKey: getEnvVar('BUN_PUBLIC_GOOGLE_API_KEY')!,
+    stunUrl: getEnvVar('BUN_PUBLIC_STUN_URL'),
+    turnUrl: getEnvVar('BUN_PUBLIC_TURN_URL'),
+    turnUsername: getEnvVar('BUN_PUBLIC_TURN_USERNAME'),
+    turnCredential: getEnvVar('BUN_PUBLIC_TURN_CREDENTIAL'),
   };
 }
 

@@ -10,7 +10,11 @@ import { getDB } from '../db/db';
 const BACKUP_FILENAME = 'flowang-backup.enc';
 const DRIVE_API_BASE = 'https://www.googleapis.com/drive/v3';
 const DRIVE_UPLOAD_BASE = 'https://www.googleapis.com/upload/drive/v3';
-const SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
+const SCOPE = [
+  'https://www.googleapis.com/auth/drive.appdata',
+  'https://www.googleapis.com/auth/userinfo.profile',
+  'https://www.googleapis.com/auth/userinfo.email',
+].join(' ');
 const RETRY_COUNT = 3;
 const RETRY_INTERVAL = 5000;
 

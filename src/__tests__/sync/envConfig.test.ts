@@ -13,14 +13,14 @@ const env = import.meta.env as EnvRecord;
 describe('EnvConfig', () => {
   test('getMissingRequiredVars returns missing vars', () => {
     const original = { ...env };
-    delete env.VITE_WEBRTC_SIGNALING_URL;
-    delete env.VITE_GOOGLE_CLIENT_ID;
-    delete env.VITE_GOOGLE_API_KEY;
+    delete env.BUN_PUBLIC_WEBRTC_SIGNALING_URL;
+    delete env.BUN_PUBLIC_GOOGLE_CLIENT_ID;
+    delete env.BUN_PUBLIC_GOOGLE_API_KEY;
     try {
       const missing = getMissingRequiredVars();
-      expect(missing).toContain('VITE_WEBRTC_SIGNALING_URL');
-      expect(missing).toContain('VITE_GOOGLE_CLIENT_ID');
-      expect(missing).toContain('VITE_GOOGLE_API_KEY');
+      expect(missing).toContain('BUN_PUBLIC_WEBRTC_SIGNALING_URL');
+      expect(missing).toContain('BUN_PUBLIC_GOOGLE_CLIENT_ID');
+      expect(missing).toContain('BUN_PUBLIC_GOOGLE_API_KEY');
     } finally {
       Object.assign(env, original);
     }
@@ -28,7 +28,7 @@ describe('EnvConfig', () => {
 
   test('validateEnvConfig throws EnvConfigError if vars missing', () => {
     const original = { ...env };
-    delete env.VITE_WEBRTC_SIGNALING_URL;
+    delete env.BUN_PUBLIC_WEBRTC_SIGNALING_URL;
     try {
       expect(() => validateEnvConfig()).toThrow(EnvConfigError);
     } finally {
@@ -38,9 +38,9 @@ describe('EnvConfig', () => {
 
   test('validateEnvConfig succeeds with all required vars', () => {
     const original = { ...env };
-    env.VITE_WEBRTC_SIGNALING_URL = 'wss://test';
-    env.VITE_GOOGLE_CLIENT_ID = 'test';
-    env.VITE_GOOGLE_API_KEY = 'test';
+    env.BUN_PUBLIC_WEBRTC_SIGNALING_URL = 'wss://test';
+    env.BUN_PUBLIC_GOOGLE_CLIENT_ID = 'test';
+    env.BUN_PUBLIC_GOOGLE_API_KEY = 'test';
     try {
       expect(() => validateEnvConfig()).not.toThrow();
     } finally {
@@ -50,10 +50,10 @@ describe('EnvConfig', () => {
 
   test('getIceServers returns empty array if no STUN/TURN', () => {
     const original = { ...env };
-    delete env.VITE_STUN_URL;
-    delete env.VITE_TURN_URL;
-    delete env.VITE_TURN_USERNAME;
-    delete env.VITE_TURN_CREDENTIAL;
+    delete env.BUN_PUBLIC_STUN_URL;
+    delete env.BUN_PUBLIC_TURN_URL;
+    delete env.BUN_PUBLIC_TURN_USERNAME;
+    delete env.BUN_PUBLIC_TURN_CREDENTIAL;
     try {
       expect(getIceServers()).toEqual([]);
     } finally {
@@ -63,9 +63,9 @@ describe('EnvConfig', () => {
 
   test('partial TURN config is invalid', () => {
     const original = { ...env };
-    env.VITE_TURN_URL = 'turn:test';
-    delete env.VITE_TURN_USERNAME;
-    delete env.VITE_TURN_CREDENTIAL;
+    env.BUN_PUBLIC_TURN_URL = 'turn:test';
+    delete env.BUN_PUBLIC_TURN_USERNAME;
+    delete env.BUN_PUBLIC_TURN_CREDENTIAL;
     try {
       expect(validateTurnConfig().length).toBeGreaterThan(0);
     } finally {

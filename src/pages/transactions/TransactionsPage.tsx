@@ -32,20 +32,27 @@ export default function TransactionsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4 p-4 pb-6">
-      <div className="flex items-center justify-between pt-1">
+    <div className="flex flex-col gap-4 p-4 pb-28">
+      <div className="pt-1">
         <h1 className="text-xl font-bold text-foreground">Transaksi</h1>
-        <button
-          type="button"
-          onClick={() => navigate("/transactions/new")}
-          className="flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-xs font-semibold text-primary-foreground shadow-sm transition-all hover:bg-primary/90 active:scale-95"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          Tambah
-        </button>
       </div>
       <TransactionFilter />
       <TransactionList />
+
+      {/* FAB — fixed tapi dibatasi lebar container via left/right calc */}
+      <div className="fixed bottom-[calc(4rem+1.5rem)] left-1/2 z-40 w-full max-w-[480px] -translate-x-1/2 px-4 pointer-events-none">
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => navigate("/transactions/new")}
+            className="pointer-events-auto flex items-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-lg transition-all hover:bg-primary/90 active:scale-95"
+            aria-label="Tambah transaksi"
+          >
+            <Plus className="h-4 w-4" />
+            Tambah
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

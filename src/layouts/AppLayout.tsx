@@ -19,14 +19,19 @@ export default function AppLayout() {
   if (!dbReady) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <LoadingSpinner fullscreen />
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-10 w-10 rounded-2xl bg-primary flex items-center justify-center">
+            <span className="text-primary-foreground font-bold text-sm">F</span>
+          </div>
+          <LoadingSpinner />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-[480px] flex-col bg-background font-sans">
-      <main className="flex-1 overflow-y-auto pb-20">
+    <div className="mx-auto flex min-h-screen max-w-[480px] flex-col bg-background">
+      <main className="flex-1 overflow-y-auto pb-24">
         <Outlet />
       </main>
       <BottomNav />

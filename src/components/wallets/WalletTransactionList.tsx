@@ -38,10 +38,8 @@ export default function WalletTransactionList({ walletId }: WalletTransactionLis
 
   return (
     <div className="space-y-2">
-      <p className="text-sm text-muted-foreground">
-        {filtered.length} transaksi
-      </p>
-      <div className="flex flex-col gap-2">
+      <p className="text-xs font-medium text-muted-foreground">{filtered.length} transaksi</p>
+      <div className="flex flex-col gap-2 stagger-children">
         {filtered.map((t) => (
           <div
             key={t.id}

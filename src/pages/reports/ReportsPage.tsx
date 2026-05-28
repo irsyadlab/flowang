@@ -27,34 +27,34 @@ export default function ReportsPage() {
   if (txError) {
     return (
       <div className="flex flex-col gap-4 p-4">
-        <h1 className="text-lg font-semibold">Laporan</h1>
+        <h1 className="text-xl font-bold text-foreground pt-1">Laporan</h1>
         <ErrorMessage message={txError} />
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-4 p-4">
-      <h1 className="text-lg font-semibold">Laporan</h1>
+    <div className="flex flex-col gap-4 p-4 pb-6">
+      <h1 className="text-xl font-bold text-foreground pt-1">Laporan</h1>
       <Tabs defaultValue="realtime">
-        <TabsList className="w-full">
-          <TabsTrigger value="realtime" className="flex-1">
+        <TabsList className="w-full rounded-2xl bg-muted p-1 h-auto">
+          <TabsTrigger value="realtime" className="flex-1 rounded-xl text-xs font-medium py-2 data-[state=active]:bg-card data-[state=active]:shadow-sm">
             Realtime
           </TabsTrigger>
-          <TabsTrigger value="monthly" className="flex-1">
+          <TabsTrigger value="monthly" className="flex-1 rounded-xl text-xs font-medium py-2 data-[state=active]:bg-card data-[state=active]:shadow-sm">
             Bulanan
           </TabsTrigger>
-          <TabsTrigger value="custom" className="flex-1">
+          <TabsTrigger value="custom" className="flex-1 rounded-xl text-xs font-medium py-2 data-[state=active]:bg-card data-[state=active]:shadow-sm">
             Custom
           </TabsTrigger>
         </TabsList>
-        <TabsContent value="realtime">
+        <TabsContent value="realtime" className="mt-4">
           <RealtimeReport />
         </TabsContent>
-        <TabsContent value="monthly">
+        <TabsContent value="monthly" className="mt-4">
           <MonthlyReport />
         </TabsContent>
-        <TabsContent value="custom">
+        <TabsContent value="custom" className="mt-4">
           <CustomReport />
         </TabsContent>
       </Tabs>

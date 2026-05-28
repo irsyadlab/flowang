@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, Pencil, Trash2, SlidersHorizontal } from "lucide-react";
+import {
+  ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, SlidersHorizontal,
+  Pencil, Trash2,
+} from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { Transaction } from "@/types";
 import { useWalletStore } from "@/stores/walletStore";
@@ -9,11 +12,46 @@ import { useTransactionStore } from "@/stores/transactionStore";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 
 const TYPE_CONFIG = {
-  income: { icon: ArrowDownCircle, color: "text-emerald-500", label: "Income" },
-  expense: { icon: ArrowUpCircle, color: "text-red-500", label: "Expense" },
-  transfer: { icon: ArrowLeftRight, color: "text-blue-500", label: "Transfer" },
-  adjustment_increase: { icon: SlidersHorizontal, color: "text-amber-500", label: "Koreksi Saldo" },
-  adjustment_decrease: { icon: SlidersHorizontal, color: "text-amber-500", label: "Koreksi Saldo" },
+  income: {
+    icon: ArrowDownCircle,
+    colorClass: "type-income",
+    bgClass: "type-income-bg",
+    label: "Pemasukan",
+    prefix: "+",
+    amountClass: "text-emerald-600 dark:text-emerald-400",
+  },
+  expense: {
+    icon: ArrowUpCircle,
+    colorClass: "type-expense",
+    bgClass: "type-expense-bg",
+    label: "Pengeluaran",
+    prefix: "-",
+    amountClass: "text-red-600 dark:text-red-400",
+  },
+  transfer: {
+    icon: ArrowLeftRight,
+    colorClass: "type-transfer",
+    bgClass: "type-transfer-bg",
+    label: "Transfer",
+    prefix: "",
+    amountClass: "text-blue-600 dark:text-blue-400",
+  },
+  adjustment_increase: {
+    icon: SlidersHorizontal,
+    colorClass: "type-adjustment",
+    bgClass: "type-adjustment-bg",
+    label: "Koreksi Saldo",
+    prefix: "+",
+    amountClass: "text-amber-600 dark:text-amber-400",
+  },
+  adjustment_decrease: {
+    icon: SlidersHorizontal,
+    colorClass: "type-adjustment",
+    bgClass: "type-adjustment-bg",
+    label: "Koreksi Saldo",
+    prefix: "-",
+    amountClass: "text-amber-600 dark:text-amber-400",
+  },
 } as const;
 
 interface TransactionItemProps {
@@ -37,70 +75,67 @@ export default function TransactionItem({ transaction }: TransactionItemProps) {
     ? categories.find((c) => c.id === transaction.categoryId)
     : null;
 
+  const isTransfer = transaction.type === "transfer";
+  const isCorrection = transaction.isCorrection === true;
+
+  const label = isCorrection
+    ? config.label
+    : isTransfer
+      ? "Transfer"
+      : category?.name ?? "Tanpa kategori";
+
+  const walletLabel = isTransfer
+    ? `${wallet?.name ?? "?"} → ${toWallet?.name ?? "?"}`
+    : wallet?.name ?? "?";
+
   const handleDelete = async () => {
     await deleteTransaction(transaction.id);
     setConfirmOpen(false);
   };
 
-  const walletLabel = isTransfer()
-    ? `${wallet?.name ?? "?"} → ${toWallet?.name ?? "?"}`
-    : wallet?.name ?? "?";
-
-  function isTransfer() {
-    return transaction.type === "transfer";
-  }
-
-  const isCorrection = transaction.isCorrection === true;
-
-  const label = isCorrection
-    ? config.label
-    : isTransfer()
-      ? "Transfer"
-      : category?.name ?? "Tanpa kategori";
-
   return (
     <>
-      <div className="flex items-center gap-3 rounded-lg border border-border px-4 py-3">
-        <div className={`shrink-0 ${config.color}`}>
-          <Icon className="h-5 w-5" />
+      <div className="group flex items-center gap-3 rounded-xl bg-card border border-border/60 px-3.5 py-3 transition-all duration-200 hover:border-border hover:shadow-sm">
+        {/* Icon */}
+        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${config.bgClass}`}>
+          <Icon className={`h-4 w-4 ${config.colorClass}`} />
         </div>
+
+        {/* Content */}
         <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5 min-w-0">
-              <p className="truncate text-sm font-medium">
-                {label}
-              </p>
-            </div>
-            <p className="shrink-0 text-sm font-medium">
-              {transaction.type === "income" || transaction.type === "adjustment_increase" ? "+" : transaction.type === "expense" || transaction.type === "adjustment_decrease" ? "-" : ""}
-              {formatCurrency(transaction.amount)}
+          <div className="flex items-center justify-between gap-2">
+            <p className="truncate text-sm font-medium text-foreground">{label}</p>
+            <p className={`shrink-0 text-sm font-semibold tabular-nums ${config.amountClass}`}>
+              {config.prefix}{formatCurrency(transaction.amount)}
             </p>
           </div>
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">
+          <div className="flex items-center justify-between gap-2 mt-0.5">
+            <p className="text-xs text-muted-foreground truncate">
               {walletLabel} · {formatDate(transaction.date)}
             </p>
             {!isCorrection && (
-              <div className="flex items-center gap-0.5">
+              <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button
                   type="button"
                   onClick={() => navigate(`/transactions/${transaction.id}`)}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                  aria-label="Edit transaksi"
                 >
-                  <Pencil className="h-3.5 w-3.5" />
+                  <Pencil className="h-3 w-3" />
                 </button>
                 <button
                   type="button"
                   onClick={() => setConfirmOpen(true)}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                  aria-label="Hapus transaksi"
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash2 className="h-3 w-3" />
                 </button>
               </div>
             )}
           </div>
           {transaction.note && (
-            <p className="mt-0.5 text-xs text-muted-foreground">{transaction.note}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground/70 italic truncate">{transaction.note}</p>
           )}
         </div>
       </div>
@@ -109,7 +144,7 @@ export default function TransactionItem({ transaction }: TransactionItemProps) {
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
         title="Hapus Transaksi"
-        description="Yakin ingin menghapus transaksi ini?"
+        description="Yakin ingin menghapus transaksi ini? Tindakan ini tidak dapat dibatalkan."
         onConfirm={handleDelete}
       />
     </>

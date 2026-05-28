@@ -45,8 +45,8 @@ export default function TransactionList() {
 
   return (
     <div className="space-y-2">
-      <p className="text-xs text-muted-foreground">{filtered.length} transaksi</p>
-      <div className="flex flex-col gap-2">
+      <p className="text-xs text-muted-foreground font-medium">{filtered.length} transaksi</p>
+      <div className="flex flex-col gap-2 stagger-children">
         {filtered.map((t) => (
           <TransactionItem key={t.id} transaction={t} />
         ))}

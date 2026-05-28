@@ -7,7 +7,6 @@ import { useCategoryStore } from "@/stores/categoryStore";
 import TransactionFilter from "@/components/transactions/TransactionFilter";
 import TransactionList from "@/components/transactions/TransactionList";
 import LoadingSpinner from "@/components/shared/LoadingSpinner";
-import { Button } from "@/components/ui/button";
 
 export default function TransactionsPage() {
   const navigate = useNavigate();
@@ -26,13 +25,17 @@ export default function TransactionsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4 p-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold">Transaksi</h1>
-        <Button size="sm" onClick={() => navigate("/transactions/new")}>
-          <Plus className="h-4 w-4" />
+    <div className="flex flex-col gap-4 p-4 pb-6">
+      <div className="flex items-center justify-between pt-1">
+        <h1 className="text-xl font-bold text-foreground">Transaksi</h1>
+        <button
+          type="button"
+          onClick={() => navigate("/transactions/new")}
+          className="flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-xs font-semibold text-primary-foreground shadow-sm transition-all hover:bg-primary/90 active:scale-95"
+        >
+          <Plus className="h-3.5 w-3.5" />
           Tambah
-        </Button>
+        </button>
       </div>
       <TransactionFilter />
       <TransactionList />

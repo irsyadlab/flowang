@@ -5,6 +5,7 @@ import NewTransactionPage from "@/pages/transactions/NewTransactionPage";
 import EditTransactionPage from "@/pages/transactions/EditTransactionPage";
 import ReportsPage from "@/pages/reports/ReportsPage";
 import MonthlyDetailPage from "@/pages/reports/MonthlyDetailPage";
+import MorePage from "@/pages/more/MorePage";
 import WalletsPage from "@/pages/wallets/WalletsPage";
 import NewWalletPage from "@/pages/wallets/NewWalletPage";
 import EditWalletPage from "@/pages/wallets/EditWalletPage";
@@ -26,6 +27,7 @@ export const router = createBrowserRouter([
       { path: "transactions/:id", element: <EditTransactionPage /> },
       { path: "reports", element: <ReportsPage /> },
       { path: "reports/monthly/:year/:month", element: <MonthlyDetailPage /> },
+      { path: "more", element: <MorePage /> },
       { path: "wallets", element: <WalletsPage /> },
       { path: "wallets/new", element: <NewWalletPage /> },
       { path: "wallets/:id", element: <EditWalletPage /> },

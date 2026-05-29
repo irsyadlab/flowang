@@ -7,6 +7,9 @@ const server = serve({
     "/*": index,
   },
 
+  port: process.env.APP_PORT || 3000,
+  hostname: process.env.APP_HOST || 'localhost',
+
   development: process.env.NODE_ENV !== "production" && {
     // Enable browser hot reloading in development
     hmr: true,

@@ -4,3 +4,6 @@ env = "BUN_PUBLIC_*"
 
 [bundler]
 env = "BUN_PUBLIC_*"
+
+[test]
+preload = ["./src/__tests__/setup.ts"]

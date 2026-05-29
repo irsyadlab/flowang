@@ -4,6 +4,7 @@ import { formatCurrency } from "@/lib/utils";
 import { useTransactionStore } from "@/stores/transactionStore";
 import { useCategoryStore } from "@/stores/categoryStore";
 import { Button } from "@/components/ui/button";
+import { DatePickerSheet, formatDateID } from "@/components/ui/date-picker-sheet";
 import EmptyState from "@/components/shared/EmptyState";
 import {
   BarChart3, TrendingUp, TrendingDown, Search, CalendarRange,
@@ -76,17 +77,18 @@ export default function CustomReport() {
   const rawTransactions = useTransactionStore((s) => s.transactions);
   const { categories } = useCategoryStore();
 
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const today = (() => {
+    const n = new Date();
+    return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`;
+  })();
+
+  const [startDate, setStartDate] = useState(today);
+  const [endDate, setEndDate] = useState(today);
   const [appliedRange, setAppliedRange] = useState<{ from: string; to: string } | null>(null);
   const [rangeError, setRangeError] = useState("");
 
   const handleSubmit = () => {
     setRangeError("");
-    if (!startDate || !endDate) {
-      setRangeError("Tanggal mulai dan akhir wajib diisi");
-      return;
-    }
     if (startDate > endDate) {
       setRangeError("Tanggal mulai tidak boleh lebih besar dari tanggal akhir");
       return;
@@ -147,22 +149,30 @@ export default function CustomReport() {
             <label className="mb-1.5 block text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
               Mulai
             </label>
-            <input
-              type="date"
+            <DatePickerSheet
               value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="flex h-9 w-full rounded-xl border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-[color,box-shadow] focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-ring/50"
+              onChange={(ymd) => { setStartDate(ymd); setRangeError(""); }}
+              label="Tanggal Mulai"
+              trigger={
+                <div className="flex h-9 w-full items-center rounded-xl border border-input bg-transparent px-3 text-sm font-medium text-foreground cursor-pointer hover:bg-muted transition-colors">
+                  {formatDateID(startDate)}
+                </div>
+              }
             />
           </div>
           <div>
             <label className="mb-1.5 block text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
               Akhir
             </label>
-            <input
-              type="date"
+            <DatePickerSheet
               value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="flex h-9 w-full rounded-xl border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-[color,box-shadow] focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-ring/50"
+              onChange={(ymd) => { setEndDate(ymd); setRangeError(""); }}
+              label="Tanggal Akhir"
+              trigger={
+                <div className="flex h-9 w-full items-center rounded-xl border border-input bg-transparent px-3 text-sm font-medium text-foreground cursor-pointer hover:bg-muted transition-colors">
+                  {formatDateID(endDate)}
+                </div>
+              }
             />
           </div>
         </div>
@@ -174,7 +184,6 @@ export default function CustomReport() {
         <Button
           onClick={handleSubmit}
           className="w-full rounded-xl gap-2"
-          disabled={!startDate || !endDate}
         >
           <Search className="h-4 w-4" />
           Tampilkan Laporan

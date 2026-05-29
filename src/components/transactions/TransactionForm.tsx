@@ -7,6 +7,7 @@ import { useCategoryStore } from "@/stores/categoryStore";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { DatePickerSheet, formatDateShortID } from "@/components/ui/date-picker-sheet";
 import { TrendingUp, TrendingDown, ArrowLeftRight } from "lucide-react";
 import { localDateStr } from "@/lib/utils";
 
@@ -231,10 +232,14 @@ export default function TransactionForm({ initialData, onSubmit, submitLabel = "
               <FormItem className="p-0">
                 <div className="flex items-center gap-3 px-4 py-3">
                   <span className="w-24 shrink-0 text-xs font-medium text-muted-foreground">Tanggal</span>
-                  <input
-                    type="date"
-                    {...field}
-                    className="flex-1 bg-transparent text-sm font-medium text-foreground outline-none"
+                  <DatePickerSheet
+                    value={field.value || today}
+                    onChange={field.onChange}
+                    trigger={
+                      <span className="flex-1 text-sm font-medium text-foreground">
+                        {formatDateShortID(field.value || today)}
+                      </span>
+                    }
                   />
                 </div>
                 <FormMessage className="px-4 pb-2 text-xs" />

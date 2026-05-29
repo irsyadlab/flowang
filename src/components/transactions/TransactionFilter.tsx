@@ -1,21 +1,12 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useTransactionStore } from "@/stores/transactionStore";
 import { useWalletStore } from "@/stores/walletStore";
 import { useCategoryStore } from "@/stores/categoryStore";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { DatePickerSheet } from "@/components/ui/date-picker-sheet";
 import { SlidersHorizontal, RotateCcw, ChevronLeft, ChevronRight } from "lucide-react";
 import { localDateStr } from "@/lib/utils";
-
-/** Format YYYY-MM-DD to "28 Mei 2026" */
-function formatDate(ymd: string): string {
-  const [y, m, d] = ymd.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
 
 /** Get today as YYYY-MM-DD in local time */
 function today(): string {
@@ -35,8 +26,6 @@ export default function TransactionFilter() {
   const wallets = useWalletStore((s) => s.wallets);
   const categories = useCategoryStore((s) => s.categories);
   const [filterOpen, setFilterOpen] = useState(false);
-
-  const dateInputRef = useRef<HTMLInputElement>(null);
 
   // Active date — derived from filter.dateFrom, fallback to today
   const activeDate = filter.dateFrom ?? today();
@@ -64,25 +53,11 @@ export default function TransactionFilter() {
             <ChevronLeft className="h-4 w-4" />
           </button>
 
-          {/* Date label — click opens native date picker */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => dateInputRef.current?.showPicker?.()}
-              className="flex h-8 items-center gap-1 rounded-xl border border-border bg-card px-3 text-sm font-medium transition-colors hover:bg-muted"
-            >
-              {formatDate(activeDate)}
-            </button>
-            <input
-              ref={dateInputRef}
-              type="date"
-              value={activeDate}
-              onChange={(e) => e.target.value && applyDate(e.target.value)}
-              className="pointer-events-none absolute inset-0 h-full w-full opacity-0"
-              tabIndex={-1}
-              aria-hidden
-            />
-          </div>
+          <DatePickerSheet
+            value={activeDate}
+            onChange={applyDate}
+            triggerClassName="border-border bg-card"
+          />
 
           <button
             type="button"

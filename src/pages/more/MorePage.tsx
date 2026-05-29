@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Wallet, Tag, Settings, ChevronRight, Handshake } from "lucide-react";
+import { Wallet, Tag, Settings, ChevronRight } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useSyncStore } from "@/sync/syncStore";
 import { getSyncIndicatorColor } from "@/lib/navUtils";
@@ -14,7 +14,6 @@ interface MoreNavItem {
 
 const moreNavItems: MoreNavItem[] = [
   { to: "/wallets", icon: Wallet, label: "Wallet", description: "Kelola dompet dan saldo" },
-  { to: "/loans", icon: Handshake, label: "Hutang", description: "Catat hutang-piutang dengan orang lain" },
   { to: "/categories", icon: Tag, label: "Kategori", description: "Atur kategori pemasukan & pengeluaran" },
   { to: "/settings", icon: Settings, label: "Pengaturan", description: "Tema, sinkronisasi, & lainnya", showSyncIndicator: true },
 ];

@@ -6,6 +6,7 @@ import { useLoanEntryStore } from '@/stores/loanEntryStore';
 import { countContactsWithActiveLoans } from '@/lib/loanUtils';
 import ContactList from '@/components/loans/ContactList';
 import ConfirmDialog from '@/components/shared/ConfirmDialog';
+import EmptyState from '@/components/shared/EmptyState';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
 import { Badge } from '@/components/ui/badge';
 
@@ -35,47 +36,22 @@ export default function ContactListPage() {
   const deleteContactName = contacts.find((c) => c.id === deleteTarget)?.name || '';
 
   return (
-    <div className="flex flex-col gap-4 p-4 pb-6">
-      <div className="flex items-center justify-between pt-1">
-        <div className="flex items-center gap-2">
-          <h1 className="text-xl font-bold text-foreground">Hutang</h1>
-          {activeCount > 0 && (
-            <Badge variant="secondary" className="text-[10px]">
-              {activeCount} aktif
-            </Badge>
-          )}
-        </div>
-        <button
-          type="button"
-          onClick={() => navigate('/loans/new')}
-          className="flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-xs font-semibold text-primary-foreground shadow-sm transition-all hover:bg-primary/90 active:scale-95"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          Tambah
-        </button>
+    <div className="flex flex-col gap-4 p-4 pb-28">
+      <div className="flex items-center gap-2 pt-1">
+        <h1 className="text-xl font-bold text-foreground">Hutang</h1>
+        {activeCount > 0 && (
+          <Badge variant="secondary" className="text-[10px]">
+            {activeCount} aktif
+          </Badge>
+        )}
       </div>
 
       {contacts.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border bg-card p-6">
-          <div className="flex flex-col items-center justify-center gap-4 px-4 py-10 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted">
-              <Handshake className="h-6 w-6 text-muted-foreground" />
-            </div>
-            <div className="space-y-1">
-              <h3 className="text-sm font-semibold text-foreground">Belum ada kontak</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Tambahkan kontak pertama untuk mulai mencatat hutang-piutang.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => navigate('/loans/new')}
-              className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 transition-colors"
-            >
-              Tambah Kontak
-            </button>
-          </div>
-        </div>
+        <EmptyState
+          icon={Handshake}
+          title="Belum ada catatan hutang"
+          description="Mulai catat hutang atau piutang dengan menambahkan entri baru."
+        />
       ) : (
         <ContactList
           contacts={contacts}
@@ -101,6 +77,21 @@ export default function ContactListPage() {
           }
         }}
       />
+
+      {/* FAB */}
+      <div className="fixed bottom-[calc(4rem+1.5rem)] left-1/2 z-40 w-full max-w-[480px] -translate-x-1/2 px-4 pointer-events-none">
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => navigate('/loans/new')}
+            className="pointer-events-auto flex items-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-lg transition-all hover:bg-primary/90 active:scale-95"
+            aria-label="Tambah catatan hutang"
+          >
+            <Plus className="h-4 w-4" />
+            Tambah
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

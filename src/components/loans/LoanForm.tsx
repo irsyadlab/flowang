@@ -1,27 +1,19 @@
-import { useForm } from 'react-hook-form';
+import { useState } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Save } from 'lucide-react';
 import { localDateStr } from '@/lib/utils';
-import { useLoanContactStore } from '@/stores/loanContactStore';
 import type { LoanEntry, LoanEntryFormData } from '@/types';
 import {
   Form,
-  FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { DatePickerSheet, formatDateShortID } from '@/components/ui/date-picker-sheet';
+import ContactCombobox from '@/components/loans/ContactCombobox';
+import { TrendingUp, TrendingDown } from 'lucide-react';
 
 const loanEntrySchema = z.object({
   contactId: z.string().min(1, 'Kontak wajib dipilih'),
@@ -42,149 +34,204 @@ interface LoanFormProps {
   onSubmit: (data: LoanEntryFormData) => void;
 }
 
-export default function LoanForm({ mode, defaultContactId, entry, onSubmit }: LoanFormProps) {
-  const { contacts } = useLoanContactStore();
+const DIRECTION_OPTIONS = [
+  {
+    value: 'lend',
+    label: 'Piutang',
+    sublabel: 'Kamu meminjamkan',
+    icon: TrendingUp,
+    activeBg: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400',
+  },
+  {
+    value: 'borrow',
+    label: 'Hutang',
+    sublabel: 'Kamu meminjam',
+    icon: TrendingDown,
+    activeBg: 'bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-400',
+  },
+] as const;
 
-  const form = useForm<LoanEntryFormValues>({
+/** Format number to IDR display string */
+function formatAmount(value: number): string {
+  if (!value) return '';
+  return value.toLocaleString('id-ID');
+}
+
+export default function LoanForm({ mode, defaultContactId, entry, onSubmit }: LoanFormProps) {
+  const today = localDateStr();  const form = useForm<LoanEntryFormValues>({
     resolver: zodResolver(loanEntrySchema),
     defaultValues: {
       contactId: entry?.contactId || defaultContactId || '',
       amount: entry?.amount || 0,
       direction: entry?.direction || 'lend',
-      date: entry?.date || localDateStr(),
+      date: entry?.date || today,
       note: entry?.note || '',
     },
   });
+
+  const watchAmount = useWatch({ control: form.control, name: 'amount' });
+  const watchDirection = useWatch({ control: form.control, name: 'direction' });
+
+  const [displayAmount, setDisplayAmount] = useState(
+    entry?.amount ? formatAmount(entry.amount) : ''
+  );
 
   const handleSubmit = form.handleSubmit(async (data) => {
     onSubmit(data as LoanEntryFormData);
   });
 
+  const activeDir = DIRECTION_OPTIONS.find((d) => d.value === watchDirection);
+
   return (
     <div className="flex-1 px-4 pb-8">
-      <div className="rounded-2xl border border-border bg-card p-5 space-y-5">
-        <Form {...form}>
-          <form onSubmit={handleSubmit} className="space-y-5">
+      <Form {...form}>
+        <form onSubmit={handleSubmit} className="space-y-4">
+
+          {/* Direction selector */}
+          <FormField
+            control={form.control}
+            name="direction"
+            render={({ field }) => (
+              <FormItem>
+                <div className="grid grid-cols-2 gap-2">
+                  {DIRECTION_OPTIONS.map(({ value, label, sublabel, icon: Icon, activeBg }) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => field.onChange(value)}
+                      className={`flex flex-col items-center gap-1 rounded-2xl border px-3 py-3 text-center transition-all ${
+                        field.value === value
+                          ? activeBg
+                          : 'border-border bg-card text-muted-foreground hover:bg-muted'
+                      }`}
+                    >
+                      <Icon className="h-4 w-4" />
+                      <span className="text-xs font-semibold">{label}</span>
+                      <span className="text-[10px] opacity-70">{sublabel}</span>
+                    </button>
+                  ))}
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* Amount — hero input */}
+          <FormField
+            control={form.control}
+            name="amount"
+            render={({ field }) => (
+              <FormItem>
+                <div className={`w-full overflow-hidden rounded-2xl border p-5 transition-colors ${
+                  watchAmount > 0 ? 'border-border bg-card' : 'border-dashed border-border bg-card'
+                }`}>
+                  <p className="text-xs font-medium text-muted-foreground mb-3">Jumlah</p>
+                  <div className="flex w-full items-center gap-2">
+                    <span className="shrink-0 text-2xl font-bold text-muted-foreground/50">Rp</span>
+                    <input
+                      inputMode="numeric"
+                      placeholder="0"
+                      value={displayAmount}
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/[^\d]/g, '');
+                        const num = parseInt(raw, 10) || 0;
+                        setDisplayAmount(num ? formatAmount(num) : '');
+                        field.onChange(num);
+                      }}
+                      className="w-0 flex-1 bg-transparent text-3xl font-bold tracking-tight text-foreground outline-none placeholder:text-muted-foreground/30 truncate"
+                    />
+                  </div>
+                  {watchAmount > 0 && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(watchAmount)}
+                    </p>
+                  )}
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* Detail fields — grouped card */}
+          <div className="rounded-2xl border border-border bg-card divide-y divide-border overflow-hidden">
+
+            {/* Contact */}
             <FormField
               control={form.control}
               name="contactId"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium">Kontak</FormLabel>
-                  <FormControl>
-                    <Select
+                <FormItem className="p-0">
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <span className="w-24 shrink-0 text-xs font-medium text-muted-foreground">Kontak</span>
+                    <ContactCombobox
                       value={field.value}
-                      onValueChange={field.onChange}
+                      onChange={field.onChange}
                       disabled={mode === 'edit' || !!defaultContactId}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Pilih kontak" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {contacts.map((contact) => (
-                          <SelectItem key={contact.id} value={contact.id}>
-                            {contact.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
-                  <FormMessage />
+                    />
+                  </div>
+                  <FormMessage className="px-4 pb-2 text-xs" />
                 </FormItem>
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="amount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium">Jumlah</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground font-medium select-none">
-                        Rp
-                      </span>
-                      <Input
-                        type="number"
-                        placeholder="0"
-                        className="pl-9"
-                        {...field}
-                        value={field.value === 0 ? '' : field.value}
-                        onChange={(e) => field.onChange(Number(e.target.value) || 0)}
-                      />
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="direction"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium">Arah</FormLabel>
-                  <FormControl>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Pilih arah" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="lend">Piutang (Kamu meminjamkan)</SelectItem>
-                        <SelectItem value="borrow">Hutang (Kamu meminjam)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
+            {/* Date */}
             <FormField
               control={form.control}
               name="date"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium">Tanggal</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
-                  <FormMessage />
+                <FormItem className="p-0">
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <span className="w-24 shrink-0 text-xs font-medium text-muted-foreground">Tanggal</span>
+                    <DatePickerSheet
+                      value={field.value || today}
+                      onChange={field.onChange}
+                      trigger={
+                        <span className="flex-1 text-sm font-medium text-foreground">
+                          {formatDateShortID(field.value || today)}
+                        </span>
+                      }
+                    />
+                  </div>
+                  <FormMessage className="px-4 pb-2 text-xs" />
                 </FormItem>
               )}
             />
 
+            {/* Note */}
             <FormField
               control={form.control}
               name="note"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium">Catatan (opsional)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Catatan tambahan..." {...field} />
-                  </FormControl>
-                  <FormMessage />
+                <FormItem className="p-0">
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <span className="w-24 shrink-0 text-xs font-medium text-muted-foreground">Catatan</span>
+                    <input
+                      type="text"
+                      placeholder="Opsional..."
+                      {...field}
+                      className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground/40"
+                    />
+                  </div>
+                  <FormMessage className="px-4 pb-2 text-xs" />
                 </FormItem>
               )}
             />
+          </div>
 
-            <Button
-              type="submit"
-              className="w-full gap-2"
-              disabled={form.formState.isSubmitting}
-            >
-              <Save className="h-4 w-4" />
-              {form.formState.isSubmitting
-                ? 'Menyimpan...'
-                : mode === 'edit'
-                  ? 'Simpan Perubahan'
-                  : 'Tambah Entri'}
-            </Button>
-          </form>
-        </Form>
-      </div>
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={form.formState.isSubmitting}
+            variant={activeDir?.value === 'borrow' ? 'destructive' : 'default'}
+          >
+            {form.formState.isSubmitting
+              ? 'Menyimpan...'
+              : mode === 'edit'
+                ? 'Simpan Perubahan'
+                : 'Tambah Entri'}
+          </Button>
+        </form>
+      </Form>
     </div>
   );
 }

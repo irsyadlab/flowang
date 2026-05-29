@@ -56,7 +56,16 @@ export default function LoanDetailPage() {
       <Button
         variant="outline"
         size="sm"
-        className="w-full gap-2 rounded-xl"
+        className="w-full gap-2 rounded-xl border-2 disabled:opacity-40 disabled:border-border disabled:text-muted-foreground"
+        style={
+          hasActiveEntries
+            ? {
+                borderColor: 'color-mix(in srgb, var(--income) 60%, transparent)',
+                color: 'var(--income)',
+                backgroundColor: 'var(--income-bg)',
+              }
+            : undefined
+        }
         disabled={!hasActiveEntries || isLoading}
         onClick={() => contactId && markAllSettled(contactId)}
       >

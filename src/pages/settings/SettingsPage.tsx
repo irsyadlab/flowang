@@ -25,6 +25,7 @@ import SyncKeyCard from '@/components/settings/SyncKeyCard';
 import GoogleDriveCard from '@/components/settings/GoogleDriveCard';
 import ThemeCard from '@/components/settings/ThemeCard';
 import OfflineBanner from '@/components/settings/OfflineBanner';
+import AboutCard from '@/components/settings/AboutCard';
 import { generateSyncKey, encodeSyncKey } from '@/sync/syncKeyUtils';
 import { usePeerCount } from '@/hooks/usePeerCount';
 
@@ -223,7 +224,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Appearance section */}
-      <div className="space-y-1">
+      <div className="space-y-1 mb-24">
         <p className="px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
           Tampilan
         </p>
@@ -243,6 +244,9 @@ export default function SettingsPage() {
           </button>
         </div>
       </div>
+
+      {/* About */}
+      <AboutCard />
 
       {/* ── Responsive Sheets ── */}
 

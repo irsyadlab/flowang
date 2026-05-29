@@ -8,13 +8,14 @@ interface MoreNavItem {
   to: string;
   icon: LucideIcon;
   label: string;
+  description: string;
   showSyncIndicator?: boolean;
 }
 
 const moreNavItems: MoreNavItem[] = [
-  { to: "/wallets", icon: Wallet, label: "Wallet" },
-  { to: "/categories", icon: Tag, label: "Kategori" },
-  { to: "/settings", icon: Settings, label: "Pengaturan", showSyncIndicator: true },
+  { to: "/wallets", icon: Wallet, label: "Wallet", description: "Kelola dompet dan saldo" },
+  { to: "/categories", icon: Tag, label: "Kategori", description: "Atur kategori pemasukan & pengeluaran" },
+  { to: "/settings", icon: Settings, label: "Pengaturan", description: "Tema, sinkronisasi, & lainnya", showSyncIndicator: true },
 ];
 
 function SyncIndicator() {
@@ -44,13 +45,12 @@ export default function MorePage() {
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
               <item.icon className="h-4 w-4 text-primary" />
             </div>
-            <span className="flex-1 text-sm font-medium">
-              {item.label}
-              {item.showSyncIndicator && (
-                <span className="ml-2 inline-flex items-center">
-                  <SyncIndicator />
-                </span>
-              )}
+            <span className="flex-1 min-w-0">
+              <span className="flex items-center gap-1.5 text-sm font-medium">
+                {item.label}
+                {item.showSyncIndicator && <SyncIndicator />}
+              </span>
+              <span className="text-xs text-muted-foreground">{item.description}</span>
             </span>
             <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
           </button>

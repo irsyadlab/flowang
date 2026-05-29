@@ -7,6 +7,12 @@
       "skillPath": "plugins/frontend-design/skills/frontend-design/SKILL.md",
       "computedHash": "e8118284a6365753790d44bb2758a6032b3af27fa84696428d9233f2be0f4e78"
     },
+    "guiding-users": {
+      "source": "ancoleman/ai-design-components",
+      "sourceType": "github",
+      "skillPath": "skills/guiding-users/SKILL.md",
+      "computedHash": "a833af2c5f14555bc5d5e07a979749b9ddae2dedb7388bb319de52037e63e762"
+    },
     "shadcn": {
       "source": "vercel/vercel-plugin",
       "sourceType": "github",

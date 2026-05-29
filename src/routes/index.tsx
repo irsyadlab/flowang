@@ -14,6 +14,10 @@ import CategoriesPage from "@/pages/categories/CategoriesPage";
 import NewCategoryPage from "@/pages/categories/NewCategoryPage";
 import EditCategoryPage from "@/pages/categories/EditCategoryPage";
 import SettingsPage from "@/pages/settings/SettingsPage";
+import ContactListPage from "@/pages/loans/ContactListPage";
+import LoanDetailPage from "@/pages/loans/LoanDetailPage";
+import NewLoanPage from "@/pages/loans/NewLoanPage";
+import EditLoanPage from "@/pages/loans/EditLoanPage";
 import { createBrowserRouter } from "react-router-dom";
 
 export const router = createBrowserRouter([
@@ -36,6 +40,11 @@ export const router = createBrowserRouter([
       { path: "categories/new", element: <NewCategoryPage /> },
       { path: "categories/:id", element: <EditCategoryPage /> },
       { path: "settings", element: <SettingsPage /> },
+      { path: "loans", element: <ContactListPage /> },
+      { path: "loans/new", element: <NewLoanPage /> },
+      { path: "loans/:contactId", element: <LoanDetailPage /> },
+      { path: "loans/:contactId/new", element: <NewLoanPage /> },
+      { path: "loans/:contactId/:entryId", element: <EditLoanPage /> },
     ],
   },
 ]);

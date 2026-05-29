@@ -1,11 +1,12 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, ArrowLeftRight, BarChart3, MoreHorizontal } from "lucide-react";
+import { LayoutDashboard, ArrowLeftRight, BarChart3, HandCoins, MoreHorizontal } from "lucide-react";
 import { MORE_PREFIXES } from "@/lib/navUtils";
 
 const navItems = [
   { to: "/", icon: LayoutDashboard, label: "Beranda", end: true },
   { to: "/transactions", icon: ArrowLeftRight, label: "Transaksi", end: false },
   { to: "/reports", icon: BarChart3, label: "Laporan", end: false },
+  { to: "/loans", icon: HandCoins, label: "Piutang", end: false },
 ];
 
 export default function BottomNav() {

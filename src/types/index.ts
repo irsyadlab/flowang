@@ -39,3 +39,43 @@ export interface TransactionFilter {
   dateFrom?: string;
   dateTo?: string;
 }
+
+// Loan Tracker types
+export type LoanDirection = 'lend' | 'borrow';
+export type LoanStatus = 'active' | 'settled';
+
+export interface LoanContact {
+  id: string;           // UUID v4
+  name: string;         // wajib, maks 100 karakter
+  note?: string;        // opsional
+  createdAt: string;    // ISO 8601
+  updatedAt: string;    // ISO 8601
+}
+
+export interface LoanEntry {
+  id: string;           // UUID v4
+  contactId: string;    // FK → LoanContact.id
+  amount: number;       // > 0, maks 999_999_999_999
+  direction: LoanDirection;
+  status: LoanStatus;   // default: 'active'
+  date: string;         // YYYY-MM-DD
+  note?: string;        // opsional
+  settledAt?: string;   // ISO 8601, diisi saat status → 'settled'
+  createdAt: string;    // ISO 8601
+  updatedAt: string;    // ISO 8601
+}
+
+export interface ContactSummary {
+  contactId: string;
+  totalLend: number;    // sum(amount) where direction='lend' AND status='active'
+  totalBorrow: number;  // sum(amount) where direction='borrow' AND status='active'
+  hasActiveEntries: boolean;
+}
+
+export interface LoanEntryFormData {
+  contactId: string;
+  amount: number;
+  direction: LoanDirection;
+  date: string;
+  note?: string;
+}

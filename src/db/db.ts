@@ -1,5 +1,5 @@
 const DB_NAME = 'flowang-db';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const DB_TIMEOUT = 5000; // 5 detik
 
 let dbInstance: IDBDatabase | null = null;
@@ -33,6 +33,19 @@ export function openDB(): Promise<IDBDatabase> {
       // Create categories store
       if (!db.objectStoreNames.contains('categories')) {
         db.createObjectStore('categories', { keyPath: 'id' });
+      }
+
+      // Create loan_contacts store
+      if (!db.objectStoreNames.contains('loan_contacts')) {
+        db.createObjectStore('loan_contacts', { keyPath: 'id' });
+      }
+
+      // Create loan_entries store dengan indexes
+      if (!db.objectStoreNames.contains('loan_entries')) {
+        const loanStore = db.createObjectStore('loan_entries', { keyPath: 'id' });
+        loanStore.createIndex('by_contactId', 'contactId', { unique: false });
+        loanStore.createIndex('by_date', 'date', { unique: false });
+        loanStore.createIndex('by_status', 'status', { unique: false });
       }
     };
 

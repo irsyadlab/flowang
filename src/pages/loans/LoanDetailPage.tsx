@@ -1,19 +1,21 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Plus, CheckCheck } from 'lucide-react';
+import { ArrowLeft, Plus, CheckCheck, Trash2 } from 'lucide-react';
 import { useLoanContacts } from '@/hooks/useLoanContacts';
 import { useLoanEntries } from '@/hooks/useLoanEntries';
 import { sortEntriesByDate } from '@/lib/loanUtils';
 import LoanSummaryCard from '@/components/loans/LoanSummaryCard';
 import LoanEntryList from '@/components/loans/LoanEntryList';
 import ErrorMessage from '@/components/shared/ErrorMessage';
+import ConfirmDialog from '@/components/shared/ConfirmDialog';
 import { Button } from '@/components/ui/button';
 
 export default function LoanDetailPage() {
   const { contactId } = useParams<{ contactId: string }>();
   const navigate = useNavigate();
-  const { contacts, loadContacts } = useLoanContacts();
+  const { contacts, loadContacts, deleteContact } = useLoanContacts();
   const { entries, loadEntries, toggleEntryStatus, deleteEntry, markAllSettled, isLoading } = useLoanEntries();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   useEffect(() => {
     loadContacts();
@@ -49,6 +51,14 @@ export default function LoanDetailPage() {
           <ArrowLeft className="h-4 w-4" />
         </button>
         <h1 className="text-lg font-bold text-foreground truncate flex-1">{contact.name}</h1>
+        <button
+          type="button"
+          onClick={() => setShowDeleteDialog(true)}
+          className="flex h-8 w-8 items-center justify-center rounded-xl bg-muted text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+          aria-label="Hapus kontak"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
       </div>
 
       <LoanSummaryCard totalLend={totalLend} totalBorrow={totalBorrow} />
@@ -93,6 +103,23 @@ export default function LoanDetailPage() {
           </button>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        title="Hapus Kontak"
+        description={
+          contactEntries.length > 0
+            ? `Yakin ingin menghapus "${contact.name}"? ${contactEntries.length} entri hutang akan ikut terhapus secara permanen.`
+            : `Yakin ingin menghapus "${contact.name}"?`
+        }
+        onConfirm={async () => {
+          if (contactId) {
+            await deleteContact(contactId);
+            navigate('/loans');
+          }
+        }}
+      />
     </div>
   );
 }

@@ -1,20 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Handshake } from 'lucide-react';
 import { useLoanContacts } from '@/hooks/useLoanContacts';
 import { useLoanEntryStore } from '@/stores/loanEntryStore';
 import { countContactsWithActiveLoans } from '@/lib/loanUtils';
 import ContactList from '@/components/loans/ContactList';
-import ConfirmDialog from '@/components/shared/ConfirmDialog';
 import EmptyState from '@/components/shared/EmptyState';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
 import { Badge } from '@/components/ui/badge';
 
 export default function ContactListPage() {
   const navigate = useNavigate();
-  const { contacts, isLoading, summaries, loadContacts, deleteContact } = useLoanContacts();
+  const { contacts, isLoading, summaries, loadContacts } = useLoanContacts();
   const { entries, loadEntries } = useLoanEntryStore();
-  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   useEffect(() => {
     loadContacts();
@@ -29,11 +27,6 @@ export default function ContactListPage() {
     contacts,
     new Map(entries.map((e) => [e.contactId, entries.filter((en) => en.contactId === e.contactId)]))
   );
-
-  const deleteContactEntries = deleteTarget
-    ? entries.filter((e) => e.contactId === deleteTarget)
-    : [];
-  const deleteContactName = contacts.find((c) => c.id === deleteTarget)?.name || '';
 
   return (
     <div className="flex flex-col gap-4 p-4 pb-28">
@@ -57,26 +50,8 @@ export default function ContactListPage() {
           contacts={contacts}
           summaries={summaries}
           onContactClick={(contactId) => navigate(`/loans/${contactId}`)}
-          onContactDelete={(contactId) => setDeleteTarget(contactId)}
         />
       )}
-
-      <ConfirmDialog
-        open={deleteTarget !== null}
-        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
-        title="Hapus Kontak"
-        description={
-          deleteContactEntries.length > 0
-            ? `Yakin ingin menghapus "${deleteContactName}"? ${deleteContactEntries.length} entri hutang akan ikut terhapus secara permanen.`
-            : `Yakin ingin menghapus "${deleteContactName}"?`
-        }
-        onConfirm={async () => {
-          if (deleteTarget) {
-            await deleteContact(deleteTarget);
-            setDeleteTarget(null);
-          }
-        }}
-      />
 
       {/* FAB */}
       <div className="fixed bottom-[calc(4rem+1.5rem)] left-1/2 z-40 w-full max-w-[480px] -translate-x-1/2 px-4 pointer-events-none">

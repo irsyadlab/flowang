@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Wallet, Tag, Settings, ChevronRight } from "lucide-react";
+import { Wallet, Tag, Settings, ShieldCheck, ChevronRight } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useSyncStore } from "@/sync/syncStore";
 import { getSyncIndicatorColor } from "@/lib/navUtils";
@@ -16,6 +16,7 @@ const moreNavItems: MoreNavItem[] = [
   { to: "/wallets", icon: Wallet, label: "Wallet", description: "Kelola dompet dan saldo" },
   { to: "/categories", icon: Tag, label: "Kategori", description: "Atur kategori pemasukan & pengeluaran" },
   { to: "/settings", icon: Settings, label: "Pengaturan", description: "Tema, sinkronisasi, & lainnya", showSyncIndicator: true },
+  { to: "/privacy-policy", icon: ShieldCheck, label: "Kebijakan Privasi", description: "Cara kami melindungi data Anda" },
 ];
 
 function SyncIndicator() {
@@ -35,7 +36,7 @@ export default function MorePage() {
     <div className="px-4 py-6 space-y-6">
       <h1 className="text-lg font-semibold">Lainnya</h1>
 
-      <div className="rounded-xl border bg-card divide-y">
+      <div className="rounded-xl border bg-card divide-y overflow-hidden">
         {moreNavItems.map((item) => (
           <button
             key={item.to}

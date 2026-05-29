@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Tag, Plus } from "lucide-react";
+import { Tag, Plus, ArrowLeft } from "lucide-react";
 import { useCategoryStore } from "@/stores/categoryStore";
 import CategoryItem from "@/components/categories/CategoryItem";
 import EmptyState from "@/components/shared/EmptyState";
@@ -24,7 +24,17 @@ export default function CategoriesPage() {
   return (
     <div className="flex flex-col gap-4 p-4 pb-6">
       <div className="flex items-center justify-between pt-1">
-        <h1 className="text-xl font-bold text-foreground">Kategori</h1>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="flex h-8 w-8 items-center justify-center rounded-xl bg-muted text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+            aria-label="Kembali"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+          <h1 className="text-xl font-bold text-foreground">Kategori</h1>
+        </div>
         <button
           type="button"
           onClick={() => navigate("/categories/new")}

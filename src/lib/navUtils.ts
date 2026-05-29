@@ -9,7 +9,7 @@ export interface NavItem {
   end?: boolean;
 }
 
-export const MORE_PREFIXES = ["/more", "/wallets", "/categories", "/settings"];
+export const MORE_PREFIXES = ["/more", "/wallets", "/categories", "/settings", "/privacy-policy"];
 
 const NAV_ITEMS: NavItem[] = [
   { to: "/", icon: LayoutDashboard, label: "Beranda", end: true },

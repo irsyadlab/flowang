@@ -3,6 +3,7 @@
  */
 
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   KeyRound,
   CloudUpload,
@@ -12,6 +13,7 @@ import {
   Loader2,
   ChevronRight,
   Monitor,
+  ArrowLeft,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSync } from '@/hooks/useSync';
@@ -41,6 +43,7 @@ export default function SettingsPage() {
   const { syncStatus, syncKey, connect } = useSync();
   const { theme } = useTheme();
   const { googleAuthToken, googleUserInfo, lastBackupTimestamp } = useSync();
+  const navigate = useNavigate();
   const peerCount = usePeerCount();
   const [openSheet, setOpenSheet] = useState<SheetId>(null);
   const [connecting, setConnecting] = useState(false);
@@ -149,7 +152,17 @@ export default function SettingsPage() {
 
   return (
     <div className="px-4 py-6 space-y-6">
-      <h1 className="text-lg font-semibold">Pengaturan</h1>
+      <div className="flex items-center gap-2 mb-6">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="flex h-8 w-8 items-center justify-center rounded-xl bg-muted text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+          aria-label="Kembali"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </button>
+        <h1 className="text-lg font-semibold">Pengaturan</h1>
+      </div>
 
       <OfflineBanner />
 

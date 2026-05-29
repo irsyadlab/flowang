@@ -8,10 +8,9 @@ interface ContactListProps {
   contacts: LoanContact[];
   summaries: Map<string, ContactSummary>;
   onContactClick: (contactId: string) => void;
-  onContactDelete: (contactId: string) => void;
 }
 
-export default function ContactList({ contacts, summaries, onContactClick, onContactDelete }: ContactListProps) {
+export default function ContactList({ contacts, summaries, onContactClick }: ContactListProps) {
   if (contacts.length === 0) {
     return (
       <EmptyState
@@ -77,7 +76,6 @@ export default function ContactList({ contacts, summaries, onContactClick, onCon
                 contact={contact}
                 summary={summaries.get(contact.id) || { contactId: contact.id, totalLend: 0, totalBorrow: 0, hasActiveEntries: false }}
                 onClick={() => onContactClick(contact.id)}
-                onDelete={() => onContactDelete(contact.id)}
               />
             ))}
           </div>
@@ -99,7 +97,6 @@ export default function ContactList({ contacts, summaries, onContactClick, onCon
                 contact={contact}
                 summary={summaries.get(contact.id) || { contactId: contact.id, totalLend: 0, totalBorrow: 0, hasActiveEntries: false }}
                 onClick={() => onContactClick(contact.id)}
-                onDelete={() => onContactDelete(contact.id)}
               />
             ))}
           </div>

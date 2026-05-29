@@ -1,4 +1,4 @@
-import { ChevronRight, Trash2 } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import type { LoanContact, ContactSummary } from '@/types';
 
@@ -6,7 +6,6 @@ interface ContactItemProps {
   contact: LoanContact;
   summary: ContactSummary;
   onClick: () => void;
-  onDelete: () => void;
 }
 
 /** Get initials from a name, max 2 chars */
@@ -19,7 +18,7 @@ function getInitials(name: string): string {
     .join('');
 }
 
-export default function ContactItem({ contact, summary, onClick, onDelete }: ContactItemProps) {
+export default function ContactItem({ contact, summary, onClick }: ContactItemProps) {
   const net = summary.totalLend - summary.totalBorrow;
   const isSettled = !summary.hasActiveEntries;
   const hasAny = summary.totalLend > 0 || summary.totalBorrow > 0;
@@ -106,17 +105,6 @@ export default function ContactItem({ contact, summary, onClick, onDelete }: Con
 
       {/* Actions */}
       <div className="flex shrink-0 items-center gap-1">
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete();
-          }}
-          className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground/40 opacity-0 transition-all group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive"
-          aria-label="Hapus kontak"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
         <ChevronRight className="h-4 w-4 text-muted-foreground/40 transition-colors group-hover:text-muted-foreground" />
       </div>
     </div>

@@ -15,13 +15,15 @@ interface SyncState {
   syncStatus: SyncStatus;
   syncKey: string | null;
   googleAuthToken: string | null;
+  googleTokenExpiry: number | null;
   googleUserInfo: GoogleUserInfo | null;
   lastBackupTimestamp: string | null;
   syncError: string | null;
+  storageLoaded: boolean;
 
   setSyncStatus: (status: SyncStatus) => void;
   setSyncKey: (key: string | null) => void;
-  setGoogleAuth: (token: string | null, userInfo: GoogleUserInfo | null) => void;
+  setGoogleAuth: (token: string | null, userInfo: GoogleUserInfo | null, expiresIn?: number) => void;
   setLastBackupTimestamp: (ts: string) => void;
   setSyncError: (error: string | null) => void;
   loadFromStorage: () => Promise<void>;
@@ -88,9 +90,11 @@ export const useSyncStore = create<SyncState>((set) => ({
   syncStatus: 'disconnected',
   syncKey: null,
   googleAuthToken: null,
+  googleTokenExpiry: null,
   googleUserInfo: null,
   lastBackupTimestamp: null,
   syncError: null,
+  storageLoaded: false,
 
   setSyncStatus: (status) => set({ syncStatus: status }),
   setSyncKey: (key) => {
@@ -101,15 +105,20 @@ export const useSyncStore = create<SyncState>((set) => ({
     }
     set({ syncKey: key });
   },
-  setGoogleAuth: (token, userInfo) => {
+  setGoogleAuth: (token, userInfo, expiresIn) => {
     if (token && userInfo) {
+      // expiresIn is in seconds; store absolute expiry timestamp (ms)
+      const expiry = expiresIn ? Date.now() + expiresIn * 1000 : null;
       setConfigValue('googleAuthToken', token);
       setConfigValue('googleUserInfo', userInfo);
+      if (expiry) setConfigValue('googleTokenExpiry', expiry);
+      set({ googleAuthToken: token, googleUserInfo: userInfo, googleTokenExpiry: expiry });
     } else {
       deleteConfigValue('googleAuthToken');
       deleteConfigValue('googleUserInfo');
+      deleteConfigValue('googleTokenExpiry');
+      set({ googleAuthToken: null, googleUserInfo: null, googleTokenExpiry: null });
     }
-    set({ googleAuthToken: token, googleUserInfo: userInfo });
   },
   setLastBackupTimestamp: (ts) => {
     setConfigValue('lastBackupTimestamp', ts);
@@ -119,21 +128,24 @@ export const useSyncStore = create<SyncState>((set) => ({
 
   loadFromStorage: async () => {
     try {
-      const [syncKey, googleAuthToken, googleUserInfo, lastBackupTimestamp] = await Promise.all([
+      const [syncKey, googleAuthToken, googleUserInfo, lastBackupTimestamp, googleTokenExpiry] = await Promise.all([
         getConfigValue<string>('syncKey'),
         getConfigValue<string>('googleAuthToken'),
         getConfigValue<GoogleUserInfo>('googleUserInfo'),
         getConfigValue<string>('lastBackupTimestamp'),
+        getConfigValue<number>('googleTokenExpiry'),
       ]);
 
       set({
         syncKey: syncKey ?? null,
         googleAuthToken: googleAuthToken ?? null,
         googleUserInfo: googleUserInfo ?? null,
+        googleTokenExpiry: googleTokenExpiry ?? null,
         lastBackupTimestamp: lastBackupTimestamp ?? null,
+        storageLoaded: true,
       });
     } catch {
-      // Silent — start with defaults
+      set({ storageLoaded: true });
     }
   },
 }));

@@ -18,8 +18,132 @@ const SCOPE = [
 ].join(' ');
 const RETRY_COUNT = 3;
 const RETRY_INTERVAL = 5000;
+// Refresh token 5 minutes before expiry
+const TOKEN_EXPIRY_BUFFER_MS = 5 * 60 * 1000;
 
 let backupDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+// GIS TokenClient type (minimal)
+interface GisTokenClient {
+  requestAccessToken: (overrides?: { prompt?: string }) => void;
+}
+
+interface GisTokenResponse {
+  access_token: string;
+  expires_in: number;
+  error?: string;
+}
+
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        oauth2: {
+          initTokenClient: (config: {
+            client_id: string;
+            scope: string;
+            callback: (response: GisTokenResponse) => void;
+            error_callback?: (error: { type: string }) => void;
+          }) => GisTokenClient;
+        };
+      };
+    };
+  }
+}
+
+let tokenClient: GisTokenClient | null = null;
+// Pending promise resolvers for token refresh
+let tokenRefreshResolve: ((token: string) => void) | null = null;
+let tokenRefreshReject: ((err: Error) => void) | null = null;
+
+function getOrCreateTokenClient(): GisTokenClient {
+  if (tokenClient) return tokenClient;
+
+  const config = getEnvConfig();
+  if (!window.google?.accounts?.oauth2) {
+    throw new Error('Google Identity Services belum dimuat');
+  }
+
+  tokenClient = window.google.accounts.oauth2.initTokenClient({
+    client_id: config.googleClientId,
+    scope: SCOPE,
+    callback: (response: GisTokenResponse) => {
+      if (response.error || !response.access_token) {
+        const err = new Error(response.error ?? 'Token request gagal');
+        tokenRefreshReject?.(err);
+        tokenRefreshResolve = null;
+        tokenRefreshReject = null;
+        return;
+      }
+
+      const { access_token, expires_in } = response;
+
+      // Fetch user info then store token
+      fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+        headers: { Authorization: `Bearer ${access_token}` },
+      })
+        .then((res) => res.json() as Promise<GoogleUserInfoResponse>)
+        .then((info) => {
+          useSyncStore.getState().setGoogleAuth(
+            access_token,
+            { name: info.name || 'Google User', email: info.email || '' },
+            expires_in,
+          );
+        })
+        .catch(() => {
+          // Store token even if userinfo fails
+          const existing = useSyncStore.getState().googleUserInfo;
+          useSyncStore.getState().setGoogleAuth(
+            access_token,
+            existing ?? { name: 'Google User', email: '' },
+            expires_in,
+          );
+        })
+        .finally(() => {
+          tokenRefreshResolve?.(access_token);
+          tokenRefreshResolve = null;
+          tokenRefreshReject = null;
+        });
+    },
+    error_callback: (error) => {
+      tokenRefreshReject?.(new Error(`OAuth error: ${error.type}`));
+      tokenRefreshResolve = null;
+      tokenRefreshReject = null;
+    },
+  });
+
+  return tokenClient;
+}
+
+/**
+ * Returns a valid access token, refreshing silently if expired or near expiry.
+ * If a user interaction is needed (first login), opens the consent popup.
+ */
+async function ensureValidToken(): Promise<string> {
+  const state = useSyncStore.getState();
+  const { googleAuthToken, googleTokenExpiry } = state;
+
+  // Token still valid with buffer
+  if (googleAuthToken && googleTokenExpiry && Date.now() < googleTokenExpiry - TOKEN_EXPIRY_BUFFER_MS) {
+    return googleAuthToken;
+  }
+
+  // Need to refresh — request a new token
+  return new Promise<string>((resolve, reject) => {
+    tokenRefreshResolve = resolve;
+    tokenRefreshReject = reject;
+
+    try {
+      const client = getOrCreateTokenClient();
+      // prompt: '' = silent refresh if session exists; falls back to popup if needed
+      client.requestAccessToken({ prompt: '' });
+    } catch (err) {
+      tokenRefreshResolve = null;
+      tokenRefreshReject = null;
+      reject(err);
+    }
+  });
+}
 
 function getAccessToken(): string | null {
   return useSyncStore.getState().googleAuthToken;
@@ -48,8 +172,7 @@ interface GoogleUserInfoResponse {
 }
 
 async function listAppDataFiles(): Promise<DriveFile[]> {
-  const token = getAccessToken();
-  if (!token) return [];
+  const token = await ensureValidToken();
 
   const res = await fetch(
     `${DRIVE_API_BASE}/files?spaces=appDataFolder&fields=files(id,name)`,
@@ -61,8 +184,7 @@ async function listAppDataFiles(): Promise<DriveFile[]> {
 }
 
 async function uploadFile(name: string, data: Uint8Array): Promise<void> {
-  const token = getAccessToken();
-  if (!token) throw new Error('Tidak terautentikasi');
+  const token = await ensureValidToken();
 
   const metadata = {
     name,
@@ -87,8 +209,7 @@ async function uploadFile(name: string, data: Uint8Array): Promise<void> {
 }
 
 async function downloadFile(fileId: string): Promise<Uint8Array> {
-  const token = getAccessToken();
-  if (!token) throw new Error('Tidak terautentikasi');
+  const token = await ensureValidToken();
 
   const res = await fetch(`${DRIVE_API_BASE}/files/${fileId}?alt=media`, {
     headers: { Authorization: `Bearer ${token}` },
@@ -99,8 +220,7 @@ async function downloadFile(fileId: string): Promise<Uint8Array> {
 }
 
 async function deleteFile(fileId: string): Promise<void> {
-  const token = getAccessToken();
-  if (!token) return;
+  const token = await ensureValidToken();
 
   await fetch(`${DRIVE_API_BASE}/files/${fileId}`, {
     method: 'DELETE',
@@ -161,31 +281,44 @@ async function deserializeToIndexedDB(data: Uint8Array): Promise<void> {
 }
 
 export async function login(): Promise<void> {
-  const config = getEnvConfig();
-  const redirectUri = `${window.location.origin}`;
+  return new Promise<void>((resolve, reject) => {
+    tokenRefreshResolve = (token) => {
+      void token; // token already stored in callback
+      resolve();
+    };
+    tokenRefreshReject = reject;
 
-  const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
-  authUrl.searchParams.set('client_id', config.googleClientId);
-  authUrl.searchParams.set('redirect_uri', redirectUri);
-  authUrl.searchParams.set('response_type', 'token');
-  authUrl.searchParams.set('scope', SCOPE);
-  authUrl.searchParams.set('prompt', 'consent');
-
-  window.location.href = authUrl.toString();
+    try {
+      const client = getOrCreateTokenClient();
+      // prompt: 'consent' forces account picker on first login
+      client.requestAccessToken({ prompt: 'consent' });
+    } catch (err) {
+      tokenRefreshResolve = null;
+      tokenRefreshReject = null;
+      reject(err);
+    }
+  });
 }
 
+/**
+ * handleOAuthCallback is kept for backward compatibility but is now a no-op.
+ * GIS handles the token response via the callback, not via URL hash redirect.
+ */
 export function handleOAuthCallback(): boolean {
+  // Legacy implicit flow: check if there's a token in the hash from an old redirect
   const hash = window.location.hash;
   if (!hash.includes('access_token')) return false;
 
   const params = new URLSearchParams(hash.substring(1));
   const token = params.get('access_token');
+  const expiresIn = parseInt(params.get('expires_in') ?? '3600', 10);
   if (!token) return false;
 
-  useSyncStore.getState().setGoogleAuth(token, {
-    name: 'Google User',
-    email: '',
-  });
+  useSyncStore.getState().setGoogleAuth(
+    token,
+    { name: 'Google User', email: '' },
+    expiresIn,
+  );
 
   // Fetch user info
   fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
@@ -194,10 +327,11 @@ export function handleOAuthCallback(): boolean {
     .then((res) => res.json() as Promise<GoogleUserInfoResponse>)
     .then((info) => {
       if (info.name || info.email) {
-        useSyncStore.getState().setGoogleAuth(token, {
-          name: info.name || 'Google User',
-          email: info.email || '',
-        });
+        useSyncStore.getState().setGoogleAuth(
+          token,
+          { name: info.name || 'Google User', email: info.email || '' },
+          expiresIn,
+        );
       }
     })
     .catch(() => {});
@@ -211,6 +345,8 @@ export function logout(): void {
   if (token) {
     fetch(`https://accounts.google.com/o/oauth2/revoke?token=${token}`).catch(() => {});
   }
+  // Reset GIS token client so next login starts fresh
+  tokenClient = null;
   useSyncStore.getState().setGoogleAuth(null, null);
 }
 

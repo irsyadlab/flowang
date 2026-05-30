@@ -170,6 +170,7 @@ export default function GoogleDriveCard() {
   const [backupSuccess, setBackupSuccess] = useState(false);
   const [backupExists, setBackupExists] = useState(false);
   const [checkingBackup, setCheckingBackup] = useState(false);
+  const [loggingIn, setLoggingIn] = useState(false);
   const prevSyncErrorRef = useRef(syncError);
 
   useEffect(() => {
@@ -206,8 +207,26 @@ export default function GoogleDriveCard() {
 
   if (!googleAuthToken) {
     return (
-      <Button variant="outline" className="w-full" onClick={() => googleDriveProvider.login()}>
-        Login dengan Google
+      <Button
+        variant="outline"
+        className="w-full"
+        disabled={loggingIn}
+        onClick={async () => {
+          setLoggingIn(true);
+          try {
+            await googleDriveProvider.login();
+          } catch (error) {
+            const msg = (error as Error).message;
+            toast.error(`Login gagal: ${msg}`);
+          } finally {
+            setLoggingIn(false);
+          }
+        }}
+      >
+        {loggingIn
+          ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Menghubungkan...</>
+          : 'Login dengan Google'
+        }
       </Button>
     );
   }

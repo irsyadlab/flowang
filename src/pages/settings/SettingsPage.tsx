@@ -59,9 +59,11 @@ export default function SettingsPage() {
   }
 
   // Generate sync key if none exists — run once on mount only.
-  // We read syncKey via getState() to avoid re-running when the key changes
-  // (e.g. after scanning a QR code), which would cause unnecessary re-renders.
+  // Wait for storageLoaded to avoid generating a new key before IndexedDB data
+  // is loaded (e.g. after an OAuth redirect page reload).
+  const storageLoaded = useSyncStore((s) => s.storageLoaded);
   useEffect(() => {
+    if (!storageLoaded) return;
     if (useSyncStore.getState().syncKey) return;
     const generate = async () => {
       const payload = await generateSyncKey();
@@ -69,7 +71,7 @@ export default function SettingsPage() {
       useSyncStore.getState().setSyncKey(encoded);
     };
     generate();
-  }, []);
+  }, [storageLoaded]);
 
   const handleConnect = async () => {
     setConnecting(true);

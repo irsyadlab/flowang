@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Wallet, Tag, Settings, ShieldCheck, ChevronRight } from "lucide-react";
+import { Wallet, Tag, Settings, ShieldCheck, Info, ChevronRight } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useSyncStore } from "@/sync/syncStore";
 import { getSyncIndicatorColor } from "@/lib/navUtils";
@@ -17,6 +17,7 @@ const moreNavItems: MoreNavItem[] = [
   { to: "/categories", icon: Tag, label: "Kategori", description: "Atur kategori pemasukan & pengeluaran" },
   { to: "/settings", icon: Settings, label: "Pengaturan", description: "Tema, sinkronisasi, & lainnya", showSyncIndicator: true },
   { to: "/privacy-policy", icon: ShieldCheck, label: "Kebijakan Privasi", description: "Cara kami melindungi data Anda" },
+  { to: "/about", icon: Info, label: "Tentang", description: "Versi, lisensi, & teknologi" },
 ];
 
 function SyncIndicator() {

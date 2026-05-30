@@ -4,6 +4,8 @@
   <h1>Flowang</h1>
   <p>A lightweight, private personal finance tracker that works fully offline.</p>
 
+  **[flowang.irsyadulibad.my.id](https://flowang.irsyadulibad.my.id)**
+
   ![Bun](https://img.shields.io/badge/Bun-1.2+-black?logo=bun&logoColor=white)
   ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
   ![PWA](https://img.shields.io/badge/PWA-ready-5A0FC8?logo=pwa&logoColor=white)

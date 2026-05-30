@@ -19,6 +19,7 @@ import LoanDetailPage from "@/pages/loans/LoanDetailPage";
 import NewLoanPage from "@/pages/loans/NewLoanPage";
 import EditLoanPage from "@/pages/loans/EditLoanPage";
 import PrivacyPolicyPage from "@/pages/privacy-policy/PrivacyPolicyPage";
+import AboutPage from "@/pages/more/AboutPage";
 import { createBrowserRouter } from "react-router-dom";
 
 export const router = createBrowserRouter([
@@ -47,6 +48,7 @@ export const router = createBrowserRouter([
       { path: "loans/:contactId/new", element: <NewLoanPage /> },
       { path: "loans/:contactId/:entryId", element: <EditLoanPage /> },
       { path: "privacy-policy", element: <PrivacyPolicyPage /> },
+      { path: "about", element: <AboutPage /> },
     ],
   },
 ]);

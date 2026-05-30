@@ -17,6 +17,150 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300;1,9..40,400&display=swap" rel="stylesheet" />
+    <style>
+      #splash {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: #111827;
+        overflow: hidden;
+        transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                    transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      #splash.splash-hide {
+        opacity: 0;
+        transform: scale(1.04);
+        pointer-events: none;
+      }
+
+      /* Ambient orbs */
+      .splash-orb {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(80px);
+        opacity: 0;
+        animation: orb-in 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      }
+      .splash-orb-1 {
+        width: 420px; height: 420px;
+        top: -120px; right: -80px;
+        background: radial-gradient(circle, hsl(222 47% 28% / 0.9), transparent 70%);
+        animation-delay: 0ms;
+      }
+      .splash-orb-2 {
+        width: 320px; height: 320px;
+        bottom: -80px; left: -60px;
+        background: radial-gradient(circle, hsl(217 91% 40% / 0.5), transparent 70%);
+        animation-delay: 150ms;
+      }
+      .splash-orb-3 {
+        width: 200px; height: 200px;
+        top: 40%; left: 50%;
+        transform: translate(-50%, -50%);
+        background: radial-gradient(circle, hsl(158 64% 30% / 0.3), transparent 70%);
+        animation-delay: 300ms;
+      }
+
+      /* Subtle grid */
+      .splash-grid {
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(hsl(222 30% 60% / 0.04) 1px, transparent 1px),
+          linear-gradient(90deg, hsl(222 30% 60% / 0.04) 1px, transparent 1px);
+        background-size: 48px 48px;
+        mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
+        opacity: 0;
+        animation: orb-in 1s ease-out 200ms forwards;
+      }
+
+      /* Logo mark */
+      .splash-logo {
+        position: relative;
+        width: 72px; height: 72px;
+        border-radius: 20px;
+        background: linear-gradient(135deg, hsl(222 47% 22%) 0%, hsl(230 40% 32%) 100%);
+        box-shadow:
+          0 0 0 1px hsl(222 30% 60% / 0.15),
+          0 20px 60px hsl(222 47% 10% / 0.8),
+          0 0 40px hsl(217 91% 60% / 0.12);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transform: translateY(16px) scale(0.92);
+        animation: logo-in 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) 400ms forwards;
+        margin-bottom: 28px;
+      }
+      .splash-logo svg {
+        width: 36px; height: 36px;
+      }
+
+      /* Wordmark */
+      .splash-wordmark {
+        font-family: 'DM Serif Display', Georgia, serif;
+        font-size: 2rem;
+        font-weight: 400;
+        letter-spacing: -0.02em;
+        color: #f1f5f9;
+        opacity: 0;
+        transform: translateY(10px);
+        animation: text-in 0.6s cubic-bezier(0.4, 0, 0.2, 1) 600ms forwards;
+        margin-bottom: 8px;
+      }
+      .splash-tagline {
+        font-family: 'DM Sans', system-ui, sans-serif;
+        font-size: 0.8125rem;
+        font-weight: 400;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: hsl(222 12% 55%);
+        opacity: 0;
+        transform: translateY(8px);
+        animation: text-in 0.6s cubic-bezier(0.4, 0, 0.2, 1) 750ms forwards;
+      }
+
+      /* Loading bar */
+      .splash-bar-wrap {
+        position: absolute;
+        bottom: 56px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 120px;
+        height: 2px;
+        border-radius: 2px;
+        background: hsl(222 20% 20%);
+        overflow: hidden;
+        opacity: 0;
+        animation: text-in 0.4s ease-out 900ms forwards;
+      }
+      .splash-bar {
+        height: 100%;
+        width: 0%;
+        border-radius: 2px;
+        background: linear-gradient(90deg, hsl(217 91% 60%), hsl(158 64% 48%));
+        animation: bar-fill 1.4s cubic-bezier(0.4, 0, 0.2, 1) 950ms forwards;
+      }
+
+      @keyframes orb-in {
+        to { opacity: 1; }
+      }
+      @keyframes logo-in {
+        to { opacity: 1; transform: translateY(0) scale(1); }
+      }
+      @keyframes text-in {
+        to { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes bar-fill {
+        0%   { width: 0%; }
+        60%  { width: 75%; }
+        100% { width: 100%; }
+      }
+    </style>
     <script type="module" src="./frontend.tsx" async></script>
     <script>
       if ('serviceWorker' in navigator) {
@@ -24,9 +168,42 @@
           navigator.serviceWorker.register('/sw.js').catch(() => {});
         });
       }
+
+      // Dismiss splash once React has mounted
+      window.__hideSplash = function() {
+        var splash = document.getElementById('splash');
+        if (!splash) return;
+        splash.classList.add('splash-hide');
+        setTimeout(function() { splash.remove(); }, 550);
+      };
     </script>
   </head>
   <body>
+    <!-- Splash screen — removed by React after mount -->
+    <div id="splash">
+      <div class="splash-orb splash-orb-1"></div>
+      <div class="splash-orb splash-orb-2"></div>
+      <div class="splash-orb splash-orb-3"></div>
+      <div class="splash-grid"></div>
+
+      <div class="splash-logo">
+        <!-- F lettermark -->
+        <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="8" y="7" width="5" height="22" rx="2" fill="white" opacity="0.95"/>
+          <rect x="8" y="7" width="18" height="5" rx="2" fill="white" opacity="0.95"/>
+          <rect x="8" y="16" width="13" height="4.5" rx="2" fill="white" opacity="0.95"/>
+          <circle cx="27" cy="27" r="4" fill="hsl(217, 91%, 65%)" opacity="0.85"/>
+        </svg>
+      </div>
+
+      <div class="splash-wordmark">Flowang</div>
+      <div class="splash-tagline">Keuangan Pribadi</div>
+
+      <div class="splash-bar-wrap">
+        <div class="splash-bar"></div>
+      </div>
+    </div>
+
     <div id="root"></div>
   </body>
 </html>

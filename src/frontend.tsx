@@ -16,11 +16,22 @@ const app = (
   </StrictMode>
 );
 
+function afterMount() {
+  if (typeof window.__hideSplash === 'function') {
+    window.__hideSplash();
+  }
+}
+
 if (import.meta.hot) {
   // With hot module reloading, `import.meta.hot.data` is persisted.
   const root = (import.meta.hot.data.root ??= createRoot(elem));
   root.render(app);
+  // In dev, splash is dismissed immediately (no need to wait)
+  afterMount();
 } else {
   // The hot module reloading API is not available in production.
-  createRoot(elem).render(app);
+  const root = createRoot(elem);
+  root.render(app);
+  // Dismiss splash after first paint
+  requestAnimationFrame(() => requestAnimationFrame(afterMount));
 }

@@ -131,43 +131,46 @@ export default function MonthlyReport() {
               key={`${row.year}-${row.month}`}
               type="button"
               onClick={() => navigate(`/reports/monthly/${row.year}/${row.month}`)}
-              className={`w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-accent/50 active:bg-accent transition-colors ${!isLast ? "border-b border-border/40" : ""}`}
+              className={`w-full grid items-center px-4 py-3 text-left hover:bg-accent/50 active:bg-accent transition-colors gap-x-3
+                [grid-template-columns:2.5rem_1px_1fr_1px_auto_1rem]
+                sm:[grid-template-columns:2.5rem_1px_1fr_1fr_1px_auto_1rem]
+                ${!isLast ? "border-b border-border/40" : ""}`}
             >
               {/* Month badge */}
-              <div className="flex-shrink-0 w-10 text-center">
+              <div className="text-center">
                 <p className="text-[11px] font-bold text-foreground leading-none">{MONTH_SHORT[row.month - 1]}</p>
                 <p className="text-[9px] text-muted-foreground mt-0.5">{row.year}</p>
               </div>
 
-              <div className="w-px h-8 bg-border/50 flex-shrink-0" />
+              <div className="h-8 bg-border/50" />
 
-              {/* Income & expense — 1 line each with icon */}
-              <div className="flex-1 min-w-0 flex items-center gap-3">
-                <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                  <TrendingUp className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
+              {/* Income & Expense — 2 baris di mobile, 1 baris di desktop */}
+              <div className="flex flex-col gap-1 min-w-0 sm:contents">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <TrendingUp className="h-3 w-3 text-emerald-500 flex-shrink-0" />
                   <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 tabular-nums truncate">
                     {formatCurrency(row.totalIncome)}
                   </span>
                 </div>
-                <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                  <TrendingDown className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <TrendingDown className="h-3 w-3 text-red-500 flex-shrink-0" />
                   <span className="text-[11px] font-medium text-red-600 dark:text-red-400 tabular-nums truncate">
                     {formatCurrency(row.totalExpense)}
                   </span>
                 </div>
               </div>
 
-              <div className="w-px h-8 bg-border/50 flex-shrink-0" />
+              <div className="h-8 bg-border/50" />
 
               {/* Net */}
-              <div className="flex-shrink-0 text-right w-20">
+              <div className="text-right">
                 <p className="text-[9px] text-muted-foreground mb-0.5">Selisih</p>
                 <p className={`text-xs font-bold tabular-nums ${isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
                   {isPositive ? "+" : ""}{formatCurrency(net)}
                 </p>
               </div>
 
-              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 flex-shrink-0" />
+              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 justify-self-end" />
             </button>
           );
         })}

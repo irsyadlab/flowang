@@ -85,6 +85,7 @@ export default function MonthlyReportChart({ dateFrom, dateTo }: Props) {
     const map = new Map<string, { income: number; expense: number }>();
     for (const tx of transactions) {
       if (tx.isCorrection || tx.isLoanLinked || tx.type === "transfer") continue;
+      const day = tx.date;
       const cur = map.get(day) ?? { income: 0, expense: 0 };
       if (tx.type === "income") cur.income += tx.amount;
       else if (tx.type === "expense") cur.expense += tx.amount;

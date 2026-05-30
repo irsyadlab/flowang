@@ -108,9 +108,14 @@ export async function updateTransaction(
   walletUpdates: WalletUpdate[]
 ): Promise<void> {
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(['transactions', 'wallets'], 'readwrite');
+    const tx = db.transaction(
+      ['transactions', 'wallets', 'loan_entries', 'loan_repayments'],
+      'readwrite'
+    );
     const txStore = tx.objectStore('transactions');
     const walletStore = tx.objectStore('wallets');
+    const loanEntriesStore = tx.objectStore('loan_entries');
+    const loanRepaymentsStore = tx.objectStore('loan_repayments');
 
     // Update transaction
     txStore.put(newRecord);
@@ -125,6 +130,60 @@ export async function updateTransaction(
           wallet.updatedAt = localISOString();
           walletStore.put(wallet);
         }
+      };
+    }
+
+    // If this is a loan-linked transaction, sync amount back to LoanEntry or Repayment
+    if (newRecord.isLoanLinked) {
+      const now = localISOString();
+
+      // Check loan_entries for a matching linkedTransactionId
+      const allEntriesReq = loanEntriesStore.getAll();
+      allEntriesReq.onsuccess = () => {
+        const entries: import('../types').LoanEntry[] = allEntriesReq.result;
+        const matchedEntry = entries.find((e) => e.linkedTransactionId === id);
+        if (matchedEntry) {
+          const amountDiff = newRecord.amount - matchedEntry.amount;
+          const updatedEntry: import('../types').LoanEntry = {
+            ...matchedEntry,
+            amount: newRecord.amount,
+            remainingAmount: Math.max(0, matchedEntry.remainingAmount + amountDiff),
+            updatedAt: now,
+          };
+          loanEntriesStore.put(updatedEntry);
+          return;
+        }
+
+        // Not a loan entry — check loan_repayments
+        const allRepaymentsReq = loanRepaymentsStore.getAll();
+        allRepaymentsReq.onsuccess = () => {
+          const repayments: import('../types').Repayment[] = allRepaymentsReq.result;
+          const matchedRepayment = repayments.find((r) => r.linkedTransactionId === id);
+          if (!matchedRepayment) return;
+
+          const oldRepaymentAmount = matchedRepayment.amount;
+          const updatedRepayment: import('../types').Repayment = {
+            ...matchedRepayment,
+            amount: newRecord.amount,
+            updatedAt: now,
+          };
+          loanRepaymentsStore.put(updatedRepayment);
+
+          // Also update the parent LoanEntry's remainingAmount
+          const parentEntryReq = loanEntriesStore.get(matchedRepayment.loanEntryId);
+          parentEntryReq.onsuccess = () => {
+            const parentEntry: import('../types').LoanEntry | undefined = parentEntryReq.result;
+            if (!parentEntry) return;
+
+            const amountDiff = newRecord.amount - oldRepaymentAmount;
+            const updatedParent: import('../types').LoanEntry = {
+              ...parentEntry,
+              remainingAmount: Math.max(0, parentEntry.remainingAmount - amountDiff),
+              updatedAt: now,
+            };
+            loanEntriesStore.put(updatedParent);
+          };
+        };
       };
     }
 

@@ -37,7 +37,7 @@ export default function MonthlyReportNote({ dateFrom, dateTo }: Props) {
     let totalIncome = 0;
 
     for (const tx of transactions) {
-      if (tx.isCorrection || tx.type === "transfer") continue;
+      if (tx.isCorrection || tx.isLoanLinked || tx.type === "transfer") continue;
       const key = tx.note?.trim() || FALLBACK;
       const cur = map.get(key) ?? { note: key, totalExpense: 0, totalIncome: 0, count: 0 };
       if (tx.type === "expense") { cur.totalExpense += tx.amount; totalExpense += tx.amount; }

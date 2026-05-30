@@ -30,6 +30,7 @@ export default function SummaryCard({ isHidden, onHiddenChange }: SummaryCardPro
     for (const t of transactions) {
       if (t.date < monthStart || t.date > today) continue;
       if (t.isCorrection) continue;
+      if (t.isLoanLinked) continue;
       if (t.type === "income") income += t.amount;
       else if (t.type === "expense") expense += t.amount;
     }

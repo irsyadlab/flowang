@@ -114,7 +114,7 @@ export default function RealtimeReport() {
   const categoryBreakdown = useMemo(() => {
     const map = new Map<string, number>();
     for (const tx of monthlyTransactions) {
-      if (tx.type !== "expense" || tx.isCorrection) continue;
+      if (tx.type !== "expense" || tx.isCorrection || tx.isLoanLinked) continue;
       const key = tx.categoryId ?? "__uncategorized__";
       map.set(key, (map.get(key) ?? 0) + tx.amount);
     }

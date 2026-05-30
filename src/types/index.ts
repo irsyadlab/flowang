@@ -27,7 +27,8 @@ export interface Transaction {
   categoryId?: string;  // FK → Category.id (wajib untuk income/expense)
   date: string;         // ISO 8601 date string (YYYY-MM-DD)
   note?: string;
-  isCorrection?: boolean; // true untuk transaksi koreksi saldo
+  isCorrection?: boolean;  // true untuk transaksi koreksi saldo
+  isLoanLinked?: boolean;  // true untuk transaksi yang terhubung ke hutang/piutang
   createdAt: string;    // ISO 8601
   updatedAt: string;    // ISO 8601
 }

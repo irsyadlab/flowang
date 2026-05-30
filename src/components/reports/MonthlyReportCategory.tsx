@@ -90,7 +90,7 @@ export default function MonthlyReportCategory({ dateFrom, dateTo }: Props) {
     let totalIncome = 0;
 
     for (const tx of transactions) {
-      if (tx.isCorrection || tx.type === "transfer") continue;
+      if (tx.isCorrection || tx.isLoanLinked || tx.type === "transfer") continue;
       const key = tx.categoryId ?? "__none__";
       if (tx.type === "expense") {
         expMap.set(key, (expMap.get(key) ?? 0) + tx.amount);

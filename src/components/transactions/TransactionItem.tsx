@@ -71,6 +71,7 @@ export default function TransactionItem({ transaction }: TransactionItemProps) {
 
   const isTransfer = transaction.type === "transfer";
   const isCorrection = transaction.isCorrection === true;
+  const isLoanLinked = transaction.isLoanLinked === true;
 
   const label = isCorrection
     ? config.label
@@ -103,7 +104,12 @@ export default function TransactionItem({ transaction }: TransactionItemProps) {
       {/* Content */}
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
-          <p className="truncate text-sm font-medium text-foreground">{label}</p>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <p className="truncate text-sm font-medium text-foreground">{label}</p>
+            {isLoanLinked && (
+              <span className="shrink-0 h-1.5 w-1.5 rounded-full bg-amber-500" title="Terkait hutang/piutang" />
+            )}
+          </div>
           <p className={`shrink-0 text-sm font-semibold tabular-nums ${config.amountClass}`}>
             {config.prefix}{formatCurrency(transaction.amount)}
           </p>

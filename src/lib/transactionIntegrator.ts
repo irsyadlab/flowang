@@ -77,6 +77,7 @@ export async function createLoanEntryWithTransaction(
           categoryId: transactionData.categoryId,
           date: transactionData.date,
           note: transactionData.note,
+          isLoanLinked: true,
           createdAt: now,
           updatedAt: now,
         };
@@ -291,6 +292,7 @@ export async function createRepaymentWithTransaction(
             categoryId: transactionData.categoryId,
             date: transactionData.date,
             note: transactionData.note,
+            isLoanLinked: true,
             createdAt: now,
             updatedAt: now,
           };

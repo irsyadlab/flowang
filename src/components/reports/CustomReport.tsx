@@ -114,7 +114,7 @@ export default function CustomReport() {
     if (!result) return [];
     const map = new Map<string, number>();
     for (const tx of filteredTransactions) {
-      if (tx.type !== "expense" || tx.isCorrection) continue;
+      if (tx.type !== "expense" || tx.isCorrection || tx.isLoanLinked) continue;
       const key = tx.categoryId ?? "__none__";
       map.set(key, (map.get(key) ?? 0) + tx.amount);
     }

@@ -153,6 +153,17 @@ export const useTransactionStore = create<TransactionState & TransactionActions>
       // Reload wallets to reflect balance changes
       await useWalletStore.getState().loadWallets();
 
+      // If this transaction is linked to a loan entry or repayment, reload those stores
+      // so the loan UI reflects the updated amount immediately
+      if (updated.isLoanLinked) {
+        const { useLoanEntryStore } = await import('./loanEntryStore');
+        const { useLoanRepaymentStore } = await import('./loanRepaymentStore');
+        await Promise.all([
+          useLoanEntryStore.getState().loadEntries(),
+          useLoanRepaymentStore.getState().loadRepayments(),
+        ]);
+      }
+
       if (useSyncStore.getState().syncKey) {
         onLocalChange('transactions', updated);
       }

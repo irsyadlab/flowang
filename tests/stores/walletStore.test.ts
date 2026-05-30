@@ -4,10 +4,11 @@
 import "fake-indexeddb/auto";
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import fc from "fast-check";
-import { openDB, closeDB } from "../../src/db/db";
+import { closeDB } from "../../src/db/db";
 import { useWalletStore } from "../../src/stores/walletStore";
 import { useTransactionStore } from "../../src/stores/transactionStore";
 import { useUIStore } from "../../src/stores/uiStore";
+import { resetDB } from "../helpers/dbHelpers";
 import type { Transaction } from "../../src/types";
 
 function resetStores() {
@@ -17,16 +18,8 @@ function resetStores() {
 
 describe("Property 2: Wallet Balance Invariant", () => {
   beforeEach(async () => {
-    // Hapus DB lama agar tidak ada data bocor dari test lain
-    closeDB();
     resetStores();
-    await new Promise<void>((resolve) => {
-      const req = indexedDB.deleteDatabase("flowang-db");
-      req.onsuccess = () => resolve();
-      req.onerror = () => resolve(); // lanjut meski gagal
-      req.onblocked = () => resolve();
-    });
-    await openDB();
+    await resetDB();
     useUIStore.getState().setDbReady(true);
     await useWalletStore.getState().loadWallets();
     await useTransactionStore.getState().loadTransactions();

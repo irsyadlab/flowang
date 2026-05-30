@@ -2,11 +2,12 @@
 // Feature: finance-tracker, Property 13: Transaction List Ordering
 import "fake-indexeddb/auto";
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
-import { openDB, closeDB } from "../../src/db/db";
+import { closeDB } from "../../src/db/db";
 import { useTransactionStore } from "../../src/stores/transactionStore";
 import { useWalletStore } from "../../src/stores/walletStore";
 import { useCategoryStore } from "../../src/stores/categoryStore";
 import { useUIStore } from "../../src/stores/uiStore";
+import { resetDB } from "../helpers/dbHelpers";
 
 function resetStores() {
   useTransactionStore.setState({ transactions: [], filter: {}, isLoading: false, error: null });
@@ -17,7 +18,7 @@ function resetStores() {
 describe("Property 10: Transaction Filter AND Logic", () => {
   beforeEach(async () => {
     resetStores();
-    await openDB();
+    await resetDB();
     useUIStore.getState().setDbReady(true);
     await useWalletStore.getState().loadWallets();
     await useCategoryStore.getState().loadCategories();

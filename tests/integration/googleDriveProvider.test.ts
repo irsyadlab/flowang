@@ -1,6 +1,6 @@
 import { describe, expect, test, beforeEach } from 'bun:test';
 import 'fake-indexeddb/auto';
-import { openDB, closeDB, getDB } from '../../src/db/db';
+import { getDB } from '../../src/db/db';
 import * as walletDb from '../../src/db/walletDb';
 import type { Wallet } from '../../src/types';
 import {
@@ -8,6 +8,7 @@ import {
   encrypt,
   decrypt,
 } from '../../src/sync/cryptoService';
+import { resetDB } from '../helpers/dbHelpers';
 
 interface IDBRecord {
   [key: string]: unknown;
@@ -15,8 +16,7 @@ interface IDBRecord {
 
 describe('GoogleDriveProvider integration', () => {
   beforeEach(async () => {
-    closeDB();
-    await openDB();
+    await resetDB();
   });
 
   test('serialize IndexedDB contains all stores', async () => {

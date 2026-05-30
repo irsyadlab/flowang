@@ -1,8 +1,9 @@
 // Feature: finance-tracker, Integration: Default Categories
 import "fake-indexeddb/auto";
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
-import { openDB, closeDB } from "../../src/db/db";
+import { closeDB } from "../../src/db/db";
 import { seedDefaultCategories, getAllCategories } from "../../src/db/categoryDb";
+import { resetDB } from "../helpers/dbHelpers";
 
 const EXPECTED_DEFAULTS = [
   { name: "Makanan & Minuman", type: "expense" },
@@ -20,7 +21,9 @@ describe("Default Categories", () => {
   let db: IDBDatabase;
 
   beforeEach(async () => {
-    db = await openDB();
+    await resetDB();
+    const { getDB } = await import("../../src/db/db");
+    db = getDB()!;
     await seedDefaultCategories(db);
   });
 

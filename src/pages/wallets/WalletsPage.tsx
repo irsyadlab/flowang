@@ -38,6 +38,7 @@ export default function WalletsPage() {
           <button
             type="button"
             onClick={() => setIsHidden(!isHidden)}
+            data-tour="wallets-eye-toggle"
             className="flex items-center justify-center h-8 w-8 rounded-xl bg-secondary text-muted-foreground hover:text-foreground transition-colors"
             aria-label={isHidden ? "Tampilkan saldo" : "Sembunyikan saldo"}
           >
@@ -46,6 +47,7 @@ export default function WalletsPage() {
           <button
             type="button"
             onClick={() => navigate("/wallets/new")}
+            data-tour="wallets-add"
             className="flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-xs font-semibold text-primary-foreground shadow-sm transition-all hover:bg-primary/90 active:scale-95"
           >
             <Plus className="h-3.5 w-3.5" />

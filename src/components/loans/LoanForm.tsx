@@ -135,7 +135,7 @@ export default function LoanForm({ mode, defaultContactId, entry, onSubmit }: Lo
             name="direction"
             render={({ field }) => (
               <FormItem>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-2" data-tour="loan-form-direction">
                   {DIRECTION_OPTIONS.map(({ value, label, sublabel, icon: Icon, activeBg }) => (
                     <button
                       key={value}
@@ -300,6 +300,7 @@ export default function LoanForm({ mode, defaultContactId, entry, onSubmit }: Lo
                     type="button"
                     role="switch"
                     aria-checked={field.value}
+                    data-tour="loan-form-create-tx"
                     onClick={() => {
                       field.onChange(!field.value);
                       if (field.value) {

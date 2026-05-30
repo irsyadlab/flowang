@@ -14,19 +14,8 @@ export interface TourStepMeta extends Step {
   page: string;
 }
 
-// Page groups in order — used to compute per-page step indicators
-export const TOUR_PAGES = [
-  'dashboard',
-  'transactions',
-  'reports',
-  'loans',
-  'more',
-] as const;
-
-export type TourPage = (typeof TOUR_PAGES)[number];
-
 export const TOUR_STEPS: TourStepMeta[] = [
-  // ── Dashboard (3 steps) ────────────────────────────────────
+  // ── Dashboard (4 steps) ────────────────────────────────────
   {
     target: 'body',
     placement: 'center',
@@ -51,6 +40,15 @@ export const TOUR_STEPS: TourStepMeta[] = [
     page: 'dashboard',
   },
   {
+    target: '[data-tour="dashboard-eye-toggle"]',
+    placement: 'bottom',
+    title: 'Sembunyikan Saldo',
+    content: 'Tap ikon mata ini untuk menyembunyikan semua angka saldo — berguna saat kamu membuka aplikasi di depan orang lain.',
+    icon: '👁️',
+    skipBeacon: true,
+    page: 'dashboard',
+  },
+  {
     target: '[data-tour="add-transaction-btn"]',
     placement: 'bottom',
     title: 'Catat Transaksi',
@@ -60,7 +58,7 @@ export const TOUR_STEPS: TourStepMeta[] = [
     page: 'dashboard',
   },
 
-  // ── Transactions (3 steps) ─────────────────────────────────
+  // ── Transactions (5 steps) ─────────────────────────────────
   {
     target: '[data-tour="nav-transactions"]',
     placement: 'top',
@@ -89,6 +87,26 @@ export const TOUR_STEPS: TourStepMeta[] = [
     skipBeacon: true,
     targetWaitTimeout: 3000,
     page: 'transactions',
+  },
+  {
+    target: '[data-tour="tx-add-fab"]',
+    placement: 'top',
+    title: 'Tambah Transaksi',
+    content: 'Tap tombol ini untuk membuka form pencatatan transaksi baru.',
+    icon: '➕',
+    skipBeacon: true,
+    targetWaitTimeout: 3000,
+    page: 'transactions',
+  },
+  {
+    target: '[data-tour="tx-form-type"]',
+    placement: 'bottom',
+    title: 'Form Transaksi',
+    content: 'Pilih tipe transaksi — Keluar untuk pengeluaran, Masuk untuk pemasukan, atau Transfer antar wallet. Lalu isi nominal, wallet, kategori, tanggal, dan catatan opsional.',
+    icon: '📝',
+    skipBeacon: true,
+    targetWaitTimeout: 3000,
+    page: 'new-transaction',
   },
 
   // ── Reports (4 steps) ──────────────────────────────────────
@@ -132,7 +150,7 @@ export const TOUR_STEPS: TourStepMeta[] = [
     page: 'reports',
   },
 
-  // ── Loans (2 steps) ────────────────────────────────────────
+  // ── Loans (3 steps) ────────────────────────────────────────
   {
     target: '[data-tour="nav-loans"]',
     placement: 'top',
@@ -146,26 +164,141 @@ export const TOUR_STEPS: TourStepMeta[] = [
     target: '[data-tour="loans-fab"]',
     placement: 'top',
     title: 'Tambah Catatan',
-    content: 'Tap tombol ini untuk mencatat hutang atau piutang baru. Pilih kontak yang sudah ada atau buat kontak baru, lalu isi nominal dan arahnya — piutang (kamu meminjamkan) atau hutang (kamu meminjam).',
+    content: 'Tap tombol ini untuk mencatat hutang atau piutang baru.',
     icon: '➕',
     skipBeacon: true,
     targetWaitTimeout: 3000,
     page: 'loans',
   },
-
-  // ── More (1 step) ──────────────────────────────────────────
   {
-    target: '[data-tour="nav-more"]',
-    placement: 'top',
-    title: 'Wallet & Kategori',
-    content: 'Kelola dompet, atur kategori transaksi, dan sesuaikan pengaturan aplikasi sesuai kebutuhanmu.',
-    icon: '⚙️',
+    target: '[data-tour="loan-form-direction"]',
+    placement: 'bottom',
+    title: 'Tipe Hutang & Piutang',
+    content: 'Pilih arah — Piutang jika kamu yang meminjamkan uang ke orang lain, Hutang jika kamu yang meminjam dari orang lain. Lalu isi nominal, kontak, tanggal, dan catatan opsional.',
+    icon: '📝',
     skipBeacon: true,
+    targetWaitTimeout: 3000,
+    page: 'new-loan',
+  },
+  {
+    target: '[data-tour="loan-form-create-tx"]',
+    placement: 'top',
+    title: 'Catat sebagai Transaksi',
+    content: 'Aktifkan toggle ini agar hutang/piutang otomatis tercatat juga di riwayat transaksi. Berguna untuk menjaga saldo wallet tetap akurat saat uang berpindah tangan.',
+    icon: '🔄',
+    skipBeacon: true,
+    targetWaitTimeout: 3000,
+    page: 'new-loan',
+  },
+
+  // ── More → Wallets (3 steps) ──────────────────────────────
+  {
+    target: '[data-tour="more-wallets"]',
+    placement: 'bottom',
+    title: 'Kelola Wallet',
+    content: 'Buka halaman wallet untuk melihat dan mengelola semua dompet kamu.',
+    icon: '👛',
+    skipBeacon: true,
+    targetWaitTimeout: 3000,
     page: 'more',
+  },
+  {
+    target: '[data-tour="wallets-eye-toggle"]',
+    placement: 'bottom',
+    title: 'Sembunyikan Saldo',
+    content: 'Toggle ini menyembunyikan saldo di halaman wallet — sama seperti tombol mata di beranda.',
+    icon: '👁️',
+    skipBeacon: true,
+    targetWaitTimeout: 3000,
+    page: 'wallets',
+  },
+  {
+    target: '[data-tour="wallets-add"]',
+    placement: 'bottom',
+    title: 'Tambah Wallet',
+    content: 'Buat wallet baru untuk memisahkan saldo — misalnya dompet utama, tabungan, atau kantong receh.',
+    icon: '➕',
+    skipBeacon: true,
+    targetWaitTimeout: 3000,
+    page: 'wallets',
+  },
+
+  // ── More → Categories (2 steps) ───────────────────────────
+  {
+    target: '[data-tour="more-categories"]',
+    placement: 'bottom',
+    title: 'Kelola Kategori',
+    content: 'Atur kategori pemasukan dan pengeluaran agar transaksi lebih terorganisir.',
+    icon: '🏷️',
+    skipBeacon: true,
+    targetWaitTimeout: 3000,
+    page: 'more',
+  },
+  {
+    target: '[data-tour="categories-add"]',
+    placement: 'bottom',
+    title: 'Tambah Kategori',
+    content: 'Buat kategori baru untuk mengelompokkan transaksi — misalnya makanan, transportasi, atau hiburan.',
+    icon: '➕',
+    skipBeacon: true,
+    targetWaitTimeout: 3000,
+    page: 'categories',
+  },
+
+  // ── More → Settings (5 steps) ─────────────────────────────
+  {
+    target: '[data-tour="more-settings"]',
+    placement: 'bottom',
+    title: 'Pengaturan',
+    content: 'Sesuaikan tema, kelola sinkronisasi antar perangkat, dan backup data ke Google Drive.',
+    icon: '🔧',
+    skipBeacon: true,
+    targetWaitTimeout: 3000,
+    page: 'more',
+  },
+  {
+    target: '[data-tour="settings-sync-status"]',
+    placement: 'bottom',
+    title: 'Status Sinkronisasi',
+    content: 'Pantau status koneksi sinkronisasi real-time antar perangkat. Tap "Hubungkan" untuk mulai sinkronisasi — data akan otomatis tersinkron saat ada perangkat lain yang terhubung dengan Sync Key yang sama.',
+    icon: '📡',
+    skipBeacon: true,
+    targetWaitTimeout: 3000,
+    page: 'settings',
+  },
+  {
+    target: '[data-tour="settings-sync-key"]',
+    placement: 'bottom',
+    title: 'Sync Key',
+    content: 'Gunakan QR Code atau salin key untuk menghubungkan perangkat lain agar data selalu tersinkronisasi secara real-time.',
+    icon: '🔑',
+    skipBeacon: true,
+    targetWaitTimeout: 3000,
+    page: 'settings',
+  },
+  {
+    target: '[data-tour="settings-google-drive"]',
+    placement: 'bottom',
+    title: 'Google Drive Backup',
+    content: 'Backup data secara terenkripsi ke Google Drive. Kamu bisa restore data dari perangkat mana saja.',
+    icon: '☁️',
+    skipBeacon: true,
+    targetWaitTimeout: 3000,
+    page: 'settings',
+  },
+  {
+    target: '[data-tour="settings-theme"]',
+    placement: 'bottom',
+    title: 'Tema',
+    content: 'Pilih tampilan terang, gelap, atau ikuti pengaturan sistem.',
+    icon: '🎨',
+    skipBeacon: true,
+    targetWaitTimeout: 3000,
+    page: 'settings',
   },
 ];
 
 // Runtime validation
-if (TOUR_STEPS.length !== 13) {
-  throw new Error(`TOUR_STEPS must have exactly 13 steps, got ${TOUR_STEPS.length}`);
+if (TOUR_STEPS.length !== 27) {
+  throw new Error(`TOUR_STEPS must have exactly 27 steps, got ${TOUR_STEPS.length}`);
 }

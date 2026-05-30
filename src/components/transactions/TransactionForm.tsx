@@ -68,7 +68,7 @@ export default function TransactionForm({ initialData, onSubmit, submitLabel = "
           name="type"
           render={({ field }) => (
             <FormItem>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 gap-2" data-tour="tx-form-type">
                 {TYPE_OPTIONS.map(({ value, label, icon: Icon, activeBg }) => (
                   <button
                     key={value}

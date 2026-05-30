@@ -174,7 +174,7 @@ export default function SettingsPage() {
         <div className="overflow-hidden rounded-xl border border-border bg-card divide-y divide-border">
 
           {/* Sync status row */}
-          <div className="flex items-center gap-3 px-4 py-3.5">
+          <div data-tour="settings-sync-status" className="flex items-center gap-3 px-4 py-3.5">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
               {syncStatus === 'disconnected'
                 ? <WifiOff className="h-4 w-4 text-primary" />
@@ -204,6 +204,7 @@ export default function SettingsPage() {
           {/* Sync Key row */}
           <button
             onClick={() => setOpenSheet('sync-key')}
+            data-tour="settings-sync-key"
             className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-muted/50 active:bg-muted"
           >
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
@@ -221,6 +222,7 @@ export default function SettingsPage() {
           {/* Google Drive row */}
           <button
             onClick={() => setOpenSheet('google-drive')}
+            data-tour="settings-google-drive"
             className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-muted/50 active:bg-muted"
           >
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
@@ -244,6 +246,7 @@ export default function SettingsPage() {
         <div className="overflow-hidden rounded-xl border border-border bg-card">
           <button
             onClick={() => setOpenSheet('theme')}
+            data-tour="settings-theme"
             className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-muted/50 active:bg-muted"
           >
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">

@@ -52,6 +52,7 @@ export default function SummaryCard({ isHidden, onHiddenChange }: SummaryCardPro
         <button
           type="button"
           onClick={() => onHiddenChange(!isHidden)}
+          data-tour="dashboard-eye-toggle"
           className="flex items-center justify-center h-8 w-8 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
           aria-label={isHidden ? "Tampilkan saldo" : "Sembunyikan saldo"}
         >

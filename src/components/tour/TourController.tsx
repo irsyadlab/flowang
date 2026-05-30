@@ -6,9 +6,41 @@ import { shouldAutoStart } from '@/lib/tourStorage';
 import { TOUR_STEPS } from '@/lib/tourSteps';
 import { TourTooltip } from './TourTooltip';
 
-const TOUR_STEP_COUNT = 13;
+const TOUR_STEP_COUNT = 27;
 const AUTO_START_DELAY_MS = 800;
-const DOM_READY_DELAY_MS = 300;
+const DOM_READY_DELAY_MS = 400;
+
+// Map: step index → route to navigate to BEFORE showing that step
+const NAVIGATE_BEFORE: Record<number, string> = {
+  // Transactions
+  5:  '/transactions',       // tx-date-nav
+  6:  '/transactions',       // tx-filter-btn
+  7:  '/transactions',       // tx-add-fab
+  8:  '/transactions/new',   // tx-form-type
+  // Reports
+  9:  '/reports',            // nav-reports
+  10: '/reports',            // report-tab-realtime
+  11: '/reports',            // report-tab-monthly
+  12: '/reports',            // report-tab-custom
+  // Loans
+  13: '/loans',              // nav-loans
+  14: '/loans',              // loans-fab
+  15: '/loans/new',          // loan-form-direction
+  16: '/loans/new',          // loan-form-create-tx (same page)
+  // More → Wallets
+  17: '/more',               // more-wallets
+  18: '/wallets',            // wallets-eye-toggle
+  19: '/wallets',            // wallets-add
+  // More → Categories
+  20: '/more',               // more-categories
+  21: '/categories',         // categories-add
+  // More → Settings
+  22: '/more',               // more-settings
+  23: '/settings',           // settings-sync-status
+  24: '/settings',           // settings-sync-key
+  25: '/settings',           // settings-google-drive
+  26: '/settings',           // settings-theme
+};
 
 export default function TourController() {
   const navigate = useNavigate();
@@ -39,7 +71,6 @@ export default function TourController() {
       previousFocusRef.current = document.activeElement as HTMLElement;
       navigate('/', { replace: true });
 
-      // Wait for dashboard DOM to be ready before starting tour
       setTimeout(() => {
         if (cancelled.current) return;
         markAutoStarted();
@@ -51,7 +82,7 @@ export default function TourController() {
       cancelled.current = true;
       clearTimeout(timer);
     };
-  // Only run once on mount — deps intentionally omitted
+  // Only run once on mount
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -63,42 +94,24 @@ export default function TourController() {
     }
   }, [run]);
 
-  // v3: onEvent replaces callback. In controlled mode, we manage stepIndex ourselves.
+  const goToStep = (nextIndex: number) => {
+    const route = NAVIGATE_BEFORE[nextIndex];
+    if (route) {
+      navigate(route);
+      setTimeout(() => setStepIndex(nextIndex), DOM_READY_DELAY_MS);
+    } else {
+      setStepIndex(nextIndex);
+    }
+  };
+
   const handleEvent = (data: EventData) => {
     const { status, action, index, type } = data;
 
     if (type === EVENTS.STEP_AFTER) {
       if (action === ACTIONS.NEXT) {
-        // Step 3 (nav-transactions) → navigate to /transactions first, then advance
-        if (index === 3) {
-          navigate('/transactions');
-          setTimeout(() => setStepIndex(4), 400);
-        // Step 6 (nav-reports) → navigate to /reports first, then advance
-        } else if (index === 6) {
-          navigate('/reports');
-          setTimeout(() => setStepIndex(7), 400);
-        // Step 10 (nav-loans) → navigate to /loans first, then advance
-        } else if (index === 10) {
-          navigate('/loans');
-          setTimeout(() => setStepIndex(11), 400);
-        } else {
-          setStepIndex(index + 1);
-        }
+        goToStep(index + 1);
       } else if (action === ACTIONS.PREV) {
-        // Step 4 (tx-date-nav) going back → navigate to dashboard first
-        if (index === 4) {
-          navigate('/');
-          setTimeout(() => setStepIndex(3), 400);
-        // Step 7 (report-tab-realtime) going back → navigate to /transactions
-        } else if (index === 7) {
-          navigate('/transactions');
-          setTimeout(() => setStepIndex(6), 400);
-        // Step 11 (loans-summary-strip) going back → navigate to /reports
-        } else if (index === 11) {
-          navigate('/reports');
-          setTimeout(() => setStepIndex(10), 400);        } else {
-          setStepIndex(index - 1);
-        }
+        goToStep(index - 1);
       } else if (action === ACTIONS.CLOSE || action === ACTIONS.SKIP) {
         skipTour();
         return;

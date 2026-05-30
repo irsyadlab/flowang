@@ -155,6 +155,19 @@ if (existsSync(iconsDir)) {
   }
 }
 
+const screenshotsDir = path.join("public", "screenshots");
+if (existsSync(screenshotsDir)) {
+  const { readdir } = await import("fs/promises");
+  const outScreenshotsDir = path.join(outdir, "screenshots");
+  const screenshotFiles = await readdir(screenshotsDir);
+  for (const file of screenshotFiles) {
+    staticFiles.push({
+      src: path.join(screenshotsDir, file),
+      dest: path.join(outScreenshotsDir, file),
+    });
+  }
+}
+
 const { copyFile: copy, mkdir } = await import("fs/promises");
 for (const { src, dest } of staticFiles) {
   if (existsSync(src)) {

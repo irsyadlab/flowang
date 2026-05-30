@@ -23,6 +23,28 @@
       "purpose": "any maskable"
     }
   ],
-  "screenshots": [],
+  "screenshots": [
+    {
+      "src": "/screenshots/preview-1.webp",
+      "sizes": "890x1816",
+      "type": "image/webp",
+      "form_factor": "narrow",
+      "label": "Dashboard & Ringkasan Keuangan"
+    },
+    {
+      "src": "/screenshots/preview-2.webp",
+      "sizes": "890x1816",
+      "type": "image/webp",
+      "form_factor": "narrow",
+      "label": "Pencatatan Transaksi"
+    },
+    {
+      "src": "/screenshots/preview-3.webp",
+      "sizes": "890x1816",
+      "type": "image/webp",
+      "form_factor": "narrow",
+      "label": "Laporan & Analisis"
+    }
+  ],
   "categories": ["finance", "productivity"]
 }

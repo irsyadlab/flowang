@@ -41,6 +41,10 @@ const server = serve({
       const file = req.params.file;
       return serveStatic(`icons/${file}`) ?? new Response("Not found", { status: 404 });
     },
+    "/screenshots/:file": (req) => {
+      const file = req.params.file;
+      return serveStatic(`screenshots/${file}`) ?? new Response("Not found", { status: 404 });
+    },
     // Serve index.html for all unmatched routes (SPA fallback)
     "/*": index,
   },

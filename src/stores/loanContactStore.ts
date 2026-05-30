@@ -4,6 +4,8 @@ import * as loanContactDb from '../db/loanContactDb';
 import { getDB } from '../db/db';
 import { useUIStore } from './uiStore';
 import { localISOString } from '../lib/utils';
+import { useSyncStore } from '../sync/syncStore';
+import { onLocalChange } from '../sync/syncManager';
 
 interface LoanContactState {
   contacts: LoanContact[];
@@ -61,6 +63,9 @@ export const useLoanContactStore = create<LoanContactState & LoanContactActions>
         contacts: [...state.contacts, contact],
         isLoading: false,
       }));
+      if (useSyncStore.getState().syncKey) {
+        onLocalChange('loan_contacts', contact);
+      }
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
     }
@@ -83,6 +88,9 @@ export const useLoanContactStore = create<LoanContactState & LoanContactActions>
 
     await loanContactDb.addContact(db, contact);
     set((state) => ({ contacts: [...state.contacts, contact] }));
+    if (useSyncStore.getState().syncKey) {
+      onLocalChange('loan_contacts', contact);
+    }
     return contact.id;
   },
 
@@ -108,6 +116,9 @@ export const useLoanContactStore = create<LoanContactState & LoanContactActions>
         contacts: state.contacts.map((c) => (c.id === id ? updated : c)),
         isLoading: false,
       }));
+      if (useSyncStore.getState().syncKey) {
+        onLocalChange('loan_contacts', updated);
+      }
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
     }
@@ -126,6 +137,9 @@ export const useLoanContactStore = create<LoanContactState & LoanContactActions>
         contacts: state.contacts.filter((c) => c.id !== id),
         isLoading: false,
       }));
+      if (useSyncStore.getState().syncKey) {
+        onLocalChange('loan_contacts', { id, _deleted: true });
+      }
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
     }

@@ -4,6 +4,8 @@ import * as loanEntryDb from '../db/loanEntryDb';
 import { getDB } from '../db/db';
 import { useUIStore } from './uiStore';
 import { localISOString } from '../lib/utils';
+import { useSyncStore } from '../sync/syncStore';
+import { onLocalChange } from '../sync/syncManager';
 
 interface LoanEntryState {
   entries: LoanEntry[];
@@ -66,6 +68,9 @@ export const useLoanEntryStore = create<LoanEntryState & LoanEntryActions>((set,
         entries: [...state.entries, entry],
         isLoading: false,
       }));
+      if (useSyncStore.getState().syncKey) {
+        onLocalChange('loan_entries', entry);
+      }
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
     }
@@ -93,6 +98,9 @@ export const useLoanEntryStore = create<LoanEntryState & LoanEntryActions>((set,
         entries: state.entries.map((e) => (e.id === id ? updated : e)),
         isLoading: false,
       }));
+      if (useSyncStore.getState().syncKey) {
+        onLocalChange('loan_entries', updated);
+      }
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
     }
@@ -111,6 +119,9 @@ export const useLoanEntryStore = create<LoanEntryState & LoanEntryActions>((set,
         entries: state.entries.filter((e) => e.id !== id),
         isLoading: false,
       }));
+      if (useSyncStore.getState().syncKey) {
+        onLocalChange('loan_entries', { id, _deleted: true });
+      }
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
     }
@@ -129,6 +140,9 @@ export const useLoanEntryStore = create<LoanEntryState & LoanEntryActions>((set,
         entries: state.entries.map((e) => (e.id === id ? updated : e)),
         isLoading: false,
       }));
+      if (useSyncStore.getState().syncKey) {
+        onLocalChange('loan_entries', updated);
+      }
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
     }
@@ -152,6 +166,15 @@ export const useLoanEntryStore = create<LoanEntryState & LoanEntryActions>((set,
         ),
         isLoading: false,
       }));
+      if (useSyncStore.getState().syncKey) {
+        // Broadcast each settled entry individually
+        const settled = get().entries.filter(
+          (e) => e.contactId === contactId && e.status === 'settled'
+        );
+        for (const e of settled) {
+          onLocalChange('loan_entries', e);
+        }
+      }
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
     }

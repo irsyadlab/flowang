@@ -11,7 +11,9 @@ import * as googleDriveProvider from './googleDriveProvider';
 import { getDB } from '../db/db';
 import * as walletDb from '../db/walletDb';
 import * as categoryDb from '../db/categoryDb';
-import type { Wallet, Transaction, Category } from '../types';
+import * as loanContactDb from '../db/loanContactDb';
+import * as loanEntryDb from '../db/loanEntryDb';
+import type { Wallet, Transaction, Category, LoanContact, LoanEntry } from '../types';
 
 interface SyncEntity {
   id: string;
@@ -78,6 +80,8 @@ function _attachObservers(): void {
   const walletsMap = ydoc.getMap<Wallet | { id: string; _deleted: true }>('wallets');
   const transactionsMap = ydoc.getMap<Transaction | { id: string; _deleted: true }>('transactions');
   const categoriesMap = ydoc.getMap<Category | { id: string; _deleted: true }>('categories');
+  const loanContactsMap = ydoc.getMap<LoanContact | { id: string; _deleted: true }>('loan_contacts');
+  const loanEntriesMap = ydoc.getMap<LoanEntry | { id: string; _deleted: true }>('loan_entries');
 
   const handleWalletsChange = async () => {
     const db = getDB();
@@ -193,19 +197,57 @@ function _attachObservers(): void {
     await useCategoryStore.getState().loadCategories();
   };
 
+  const handleLoanContactsChange = async () => {
+    const db = getDB();
+    if (!db) return;
+
+    const entries = Array.from(loanContactsMap.values());
+    for (const entry of entries) {
+      if ((entry as SyncEntity)._deleted) {
+        await loanContactDb.deleteContact(db, entry.id).catch(() => {});
+      } else {
+        await loanContactDb.updateContact(db, entry.id, entry as LoanContact).catch(() => {});
+      }
+    }
+
+    const { useLoanContactStore } = await import('../stores/loanContactStore');
+    await useLoanContactStore.getState().loadContacts();
+  };
+
+  const handleLoanEntriesChange = async () => {
+    const db = getDB();
+    if (!db) return;
+
+    const entries = Array.from(loanEntriesMap.values());
+    for (const entry of entries) {
+      if ((entry as SyncEntity)._deleted) {
+        await loanEntryDb.deleteEntry(db, entry.id).catch(() => {});
+      } else {
+        await loanEntryDb.updateEntry(db, entry.id, entry as LoanEntry).catch(() => {});
+      }
+    }
+
+    const { useLoanEntryStore } = await import('../stores/loanEntryStore');
+    await useLoanEntryStore.getState().loadEntries();
+  };
+
   walletsMap.observe(handleWalletsChange);
   transactionsMap.observe(handleTransactionsChange);
   categoriesMap.observe(handleCategoriesChange);
+  loanContactsMap.observe(handleLoanContactsChange);
+  loanEntriesMap.observe(handleLoanEntriesChange);
 
   activeObservers.push(
     () => walletsMap.unobserve(handleWalletsChange),
     () => transactionsMap.unobserve(handleTransactionsChange),
     () => categoriesMap.unobserve(handleCategoriesChange),
+    () => loanContactsMap.unobserve(handleLoanContactsChange),
+    () => loanEntriesMap.unobserve(handleLoanEntriesChange),
   );
 }
 
 export function onLocalChange(
-  entityType: 'wallets' | 'transactions' | 'categories',
+  entityType: 'wallets' | 'transactions' | 'categories' | 'loan_contacts' | 'loan_entries',
   entity: SyncEntity
 ): void {
   const ydoc = webrtcProvider.getYDoc();
@@ -234,10 +276,12 @@ export async function clearAllLocalData(): Promise<void> {
   const db = getDB();
   if (db) {
     await new Promise<void>((resolve, reject) => {
-      const tx = db.transaction(['wallets', 'transactions', 'categories'], 'readwrite');
+      const tx = db.transaction(['wallets', 'transactions', 'categories', 'loan_contacts', 'loan_entries'], 'readwrite');
       tx.objectStore('wallets').clear();
       tx.objectStore('transactions').clear();
       tx.objectStore('categories').clear();
+      tx.objectStore('loan_contacts').clear();
+      tx.objectStore('loan_entries').clear();
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
     });
@@ -253,15 +297,19 @@ export async function clearAllLocalData(): Promise<void> {
   });
 
   // Reload stores so UI reflects the empty state
-  const [{ useWalletStore }, { useTransactionStore }, { useCategoryStore }] = await Promise.all([
+  const [{ useWalletStore }, { useTransactionStore }, { useCategoryStore }, { useLoanContactStore }, { useLoanEntryStore }] = await Promise.all([
     import('../stores/walletStore'),
     import('../stores/transactionStore'),
     import('../stores/categoryStore'),
+    import('../stores/loanContactStore'),
+    import('../stores/loanEntryStore'),
   ]);
   await Promise.all([
     useWalletStore.getState().loadWallets(),
     useTransactionStore.getState().loadTransactions(),
     useCategoryStore.getState().loadCategories(),
+    useLoanContactStore.getState().loadContacts(),
+    useLoanEntryStore.getState().loadEntries(),
   ]);
 }
 

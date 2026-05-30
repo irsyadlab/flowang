@@ -81,6 +81,14 @@ export function connect(roomName: string, encryptionKey: string): void {
     }
   });
 
+  // Listen for new peers joining and broadcast all local data to them
+  webrtcProvider.on('peers', ({ added }: { added: string[] }) => {
+    if (added.length > 0) {
+      // New peer joined — broadcast all current data
+      broadcastAllLocalData();
+    }
+  });
+
   useSyncStore.getState().setSyncStatus('connecting');
 
   // Listen for browser online event
@@ -163,4 +171,41 @@ export function disconnect(): void {
   _destroyProviders();
 
   useSyncStore.getState().setSyncStatus('disconnected');
+}
+
+/**
+ * Broadcast all local IndexedDB data to Yjs CRDT when a new peer joins.
+ * This ensures new devices get the full dataset, not just incremental changes.
+ */
+async function broadcastAllLocalData(): Promise<void> {
+  if (!ydoc) return;
+
+  try {
+    const { getDB } = await import('../db/db');
+    const db = getDB();
+    if (!db) return;
+
+    const storeNames = ['wallets', 'transactions', 'categories', 'loan_contacts', 'loan_entries'] as const;
+    
+    for (const storeName of storeNames) {
+      if (!db.objectStoreNames.contains(storeName)) continue;
+
+      const records = await new Promise<Record<string, unknown>[]>((resolve, reject) => {
+        const tx = db.transaction(storeName, 'readonly');
+        const store = tx.objectStore(storeName);
+        const request = store.getAll();
+        request.onsuccess = () => resolve(request.result as Record<string, unknown>[]);
+        request.onerror = () => reject(request.error);
+      });
+
+      const map = ydoc.getMap(storeName);
+      for (const record of records) {
+        if (record.id) {
+          map.set(record.id as string, record);
+        }
+      }
+    }
+  } catch (error) {
+    console.warn('Failed to broadcast local data:', error);
+  }
 }

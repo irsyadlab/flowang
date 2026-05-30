@@ -38,6 +38,8 @@ interface SerializedData {
   wallets: Record<string, unknown>[];
   transactions: Record<string, unknown>[];
   categories: Record<string, unknown>[];
+  loan_contacts: Record<string, unknown>[];
+  loan_entries: Record<string, unknown>[];
 }
 
 interface GoogleUserInfoResponse {
@@ -114,9 +116,11 @@ async function serializeIndexedDB(): Promise<Uint8Array> {
     wallets: [],
     transactions: [],
     categories: [],
+    loan_contacts: [],
+    loan_entries: [],
   };
 
-  for (const storeName of ['wallets', 'transactions', 'categories'] as const) {
+  for (const storeName of ['wallets', 'transactions', 'categories', 'loan_contacts', 'loan_entries'] as const) {
     const records = await new Promise<Record<string, unknown>[]>((resolve, reject) => {
       const tx = db.transaction(storeName, 'readonly');
       const store = tx.objectStore(storeName);
@@ -334,11 +338,15 @@ export async function restoreWithKey(syncKey: string): Promise<void> {
     const { useWalletStore } = await import('../stores/walletStore');
     const { useTransactionStore } = await import('../stores/transactionStore');
     const { useCategoryStore } = await import('../stores/categoryStore');
+    const { useLoanContactStore } = await import('../stores/loanContactStore');
+    const { useLoanEntryStore } = await import('../stores/loanEntryStore');
 
     await Promise.all([
       useWalletStore.getState().loadWallets(),
       useTransactionStore.getState().loadTransactions(),
       useCategoryStore.getState().loadCategories(),
+      useLoanContactStore.getState().loadContacts(),
+      useLoanEntryStore.getState().loadEntries(),
     ]);
   } catch (error) {
     const msg = (error as Error).message ?? '';

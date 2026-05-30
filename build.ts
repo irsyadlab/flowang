@@ -183,6 +183,21 @@ const entrypoints = [...new Bun.Glob("**.html").scanSync("src")]
 console.log(`📄 Found ${entrypoints.length} HTML ${entrypoints.length === 1 ? "file" : "files"} to process\n`);
 
 // Build all the HTML files
+const envDefines: Record<string, string> = {};
+const envKeys = [
+  'BUN_PUBLIC_WEBRTC_SIGNALING_URL',
+  'BUN_PUBLIC_GOOGLE_CLIENT_ID',
+  'BUN_PUBLIC_GOOGLE_API_KEY',
+  'BUN_PUBLIC_STUN_URL',
+  'BUN_PUBLIC_TURN_URL',
+  'BUN_PUBLIC_TURN_USERNAME',
+  'BUN_PUBLIC_TURN_CREDENTIAL',
+];
+for (const key of envKeys) {
+  const val = process.env[key];
+  envDefines[`process.env.${key}`] = JSON.stringify(val ?? '');
+}
+
 const result = await build({
   entrypoints,
   outdir,
@@ -192,6 +207,7 @@ const result = await build({
   sourcemap: "linked",
   define: {
     "process.env.NODE_ENV": JSON.stringify("production"),
+    ...envDefines,
   },
   ...cliConfig, // Merge in any CLI-provided options
 });
@@ -207,7 +223,32 @@ const outputTable = result.outputs.map(output => ({
 
 console.table(outputTable);
 
-// Post-process: update manifest.json icon paths to match Bun's hashed filenames
+// Generate env.js for static deployments (Caddy/nginx).
+// This file is loaded before the app bundle and injects env vars into window.__ENV__
+// so they are available at runtime without needing a Bun server.
+const envJs = path.join(outdir, "env.js");
+const envVarNames = [
+  'BUN_PUBLIC_WEBRTC_SIGNALING_URL',
+  'BUN_PUBLIC_GOOGLE_CLIENT_ID',
+  'BUN_PUBLIC_GOOGLE_API_KEY',
+  'BUN_PUBLIC_STUN_URL',
+  'BUN_PUBLIC_TURN_URL',
+  'BUN_PUBLIC_TURN_USERNAME',
+  'BUN_PUBLIC_TURN_CREDENTIAL',
+];
+const envObj: Record<string, string> = {};
+for (const key of envVarNames) {
+  const val = process.env[key];
+  if (val) envObj[key] = val;
+}
+await Bun.write(envJs, `window.__ENV__=${JSON.stringify(envObj)};`);
+console.log(`🔑 env.js generated with ${Object.keys(envObj).length} variable(s)`);
+
+// Inject <script src="/env.js"> into dist/index.html before the app bundle
+const htmlPath = path.join(outdir, "index.html");
+let html = await Bun.file(htmlPath).text();
+html = html.replace('<script type="module"', '<script src="/env.js"></script>\n  <script type="module"');
+await Bun.write(htmlPath, html);
 const { readFile, writeFile } = await import("fs/promises");
 const distHtml = await readFile(path.join(outdir, "index.html"), "utf-8");
 

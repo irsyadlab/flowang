@@ -7,6 +7,10 @@
  * as static string literals (process.env.BUN_PUBLIC_FOO). Dynamic access via
  * process.env[name] does NOT get inlined and will be undefined in the browser.
  * All env reads in this file must use static property access.
+ *
+ * For static deployments (Caddy/nginx), env vars are injected at runtime via
+ * window.__ENV__ by the server or a generated env.js file. This file reads
+ * from both sources, preferring the inlined bundle value when available.
  */
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -32,17 +36,37 @@ export class EnvConfigError extends Error {
   }
 }
 
+// ── Runtime env injection (for static deployments) ───────────────────────────
+
+declare global {
+  interface Window {
+    __ENV__?: Record<string, string>;
+    __hideSplash?: () => void;
+  }
+}
+
 // ── Raw env reads (static access — required for Bun inlining) ────────────────
+
+// Bun inlines process.env.X only when it appears as a direct top-level static
+// literal. Reading via _e[key] or inside try/catch blocks prevents inlining.
+// We use window.__ENV__ as fallback for static deployments (Caddy/nginx)
+// where process is not defined at runtime.
+
+function _safe(inlined: string | undefined, key: string): string | undefined {
+  if (typeof inlined === 'string' && inlined !== '') return inlined;
+  if (typeof window !== 'undefined' && window.__ENV__) return window.__ENV__[key];
+  return undefined;
+}
 
 function readRawEnv(): Record<string, string | undefined> {
   return {
-    BUN_PUBLIC_WEBRTC_SIGNALING_URL: process.env.BUN_PUBLIC_WEBRTC_SIGNALING_URL,
-    BUN_PUBLIC_GOOGLE_CLIENT_ID:     process.env.BUN_PUBLIC_GOOGLE_CLIENT_ID,
-    BUN_PUBLIC_GOOGLE_API_KEY:       process.env.BUN_PUBLIC_GOOGLE_API_KEY,
-    BUN_PUBLIC_STUN_URL:             process.env.BUN_PUBLIC_STUN_URL,
-    BUN_PUBLIC_TURN_URL:             process.env.BUN_PUBLIC_TURN_URL,
-    BUN_PUBLIC_TURN_USERNAME:        process.env.BUN_PUBLIC_TURN_USERNAME,
-    BUN_PUBLIC_TURN_CREDENTIAL:      process.env.BUN_PUBLIC_TURN_CREDENTIAL,
+    BUN_PUBLIC_WEBRTC_SIGNALING_URL: _safe(process.env.BUN_PUBLIC_WEBRTC_SIGNALING_URL, 'BUN_PUBLIC_WEBRTC_SIGNALING_URL'),
+    BUN_PUBLIC_GOOGLE_CLIENT_ID:     _safe(process.env.BUN_PUBLIC_GOOGLE_CLIENT_ID,     'BUN_PUBLIC_GOOGLE_CLIENT_ID'),
+    BUN_PUBLIC_GOOGLE_API_KEY:       _safe(process.env.BUN_PUBLIC_GOOGLE_API_KEY,        'BUN_PUBLIC_GOOGLE_API_KEY'),
+    BUN_PUBLIC_STUN_URL:             _safe(process.env.BUN_PUBLIC_STUN_URL,              'BUN_PUBLIC_STUN_URL'),
+    BUN_PUBLIC_TURN_URL:             _safe(process.env.BUN_PUBLIC_TURN_URL,              'BUN_PUBLIC_TURN_URL'),
+    BUN_PUBLIC_TURN_USERNAME:        _safe(process.env.BUN_PUBLIC_TURN_USERNAME,         'BUN_PUBLIC_TURN_USERNAME'),
+    BUN_PUBLIC_TURN_CREDENTIAL:      _safe(process.env.BUN_PUBLIC_TURN_CREDENTIAL,       'BUN_PUBLIC_TURN_CREDENTIAL'),
   };
 }
 

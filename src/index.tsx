@@ -35,6 +35,26 @@ function serveStatic(filePath: string): Response | null {
 const server = serve({
   routes: {
     "/sw.js":          () => serveStatic("sw.js") ?? new Response("Not found", { status: 404 }),
+    "/env.js":         () => {
+      // In dev, generate env.js on-the-fly from current process.env
+      const envVarNames = [
+        'BUN_PUBLIC_WEBRTC_SIGNALING_URL',
+        'BUN_PUBLIC_GOOGLE_CLIENT_ID',
+        'BUN_PUBLIC_GOOGLE_API_KEY',
+        'BUN_PUBLIC_STUN_URL',
+        'BUN_PUBLIC_TURN_URL',
+        'BUN_PUBLIC_TURN_USERNAME',
+        'BUN_PUBLIC_TURN_CREDENTIAL',
+      ];
+      const envObj: Record<string, string> = {};
+      for (const key of envVarNames) {
+        const val = process.env[key];
+        if (val) envObj[key] = val;
+      }
+      return new Response(`window.__ENV__=${JSON.stringify(envObj)};`, {
+        headers: { "Content-Type": "application/javascript" },
+      });
+    },
     "/manifest.json":  () => serveStatic("manifest.json") ?? new Response("Not found", { status: 404 }),
     "/robots.txt":     () => serveStatic("robots.txt") ?? new Response("Not found", { status: 404 }),
     "/icons/:file":    (req) => {

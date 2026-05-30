@@ -3,13 +3,13 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { transactionSchema, type TransactionInput } from "@/lib/validators";
 import { useWalletStore } from "@/stores/walletStore";
-import { useCategoryStore } from "@/stores/categoryStore";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { DatePickerSheet, formatDateShortID } from "@/components/ui/date-picker-sheet";
 import { TrendingUp, TrendingDown, ArrowLeftRight } from "lucide-react";
 import { localDateStr } from "@/lib/utils";
+import CategoryCombobox from "@/components/transactions/CategoryCombobox";
 
 interface TransactionFormProps {
   initialData?: TransactionInput;
@@ -31,7 +31,6 @@ function formatAmount(value: number): string {
 
 export default function TransactionForm({ initialData, onSubmit, submitLabel = "Simpan" }: TransactionFormProps) {
   const wallets = useWalletStore((s) => s.wallets);
-  const categories = useCategoryStore((s) => s.categories);
 
   const today = localDateStr();
 
@@ -55,10 +54,6 @@ export default function TransactionForm({ initialData, onSubmit, submitLabel = "
 
   const [displayAmount, setDisplayAmount] = useState(
     initialData?.amount ? formatAmount(initialData.amount) : ""
-  );
-
-  const filteredCategories = categories.filter(
-    (c) => c.type === "both" || c.type === watchType
   );
 
   const activeType = TYPE_OPTIONS.find((t) => t.value === watchType);
@@ -205,18 +200,14 @@ export default function TransactionForm({ initialData, onSubmit, submitLabel = "
                 <FormItem className="p-0">
                   <div className="flex items-center gap-3 px-4 py-3">
                     <span className="w-24 shrink-0 text-xs font-medium text-muted-foreground">Kategori</span>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="border-0 shadow-none p-0 h-auto text-sm font-medium focus:ring-0 bg-transparent">
-                          <SelectValue placeholder="Pilih kategori" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {filteredCategories.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <CategoryCombobox
+                        value={field.value}
+                        onChange={field.onChange}
+                        typeFilter={watchType === "income" || watchType === "expense" ? watchType : undefined}
+                        placeholder="Pilih kategori"
+                      />
+                    </FormControl>
                   </div>
                   <FormMessage className="px-4 pb-2 text-xs" />
                 </FormItem>

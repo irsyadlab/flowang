@@ -136,12 +136,12 @@ const start = performance.now();
 
 // Copy PWA static files (sw.js, manifest.json, icons/) to outdir
 const staticFiles = [
-  { src: path.join("src", "sw.js"), dest: path.join(outdir, "sw.js") },
-  { src: path.join("src", "manifest.json"), dest: path.join(outdir, "manifest.json") },
-  { src: path.join("src", "robots.txt"), dest: path.join(outdir, "robots.txt") },
+  { src: path.join("public", "sw.js"), dest: path.join(outdir, "sw.js") },
+  { src: path.join("public", "manifest.json"), dest: path.join(outdir, "manifest.json") },
+  { src: path.join("public", "robots.txt"), dest: path.join(outdir, "robots.txt") },
 ];
 
-const iconsDir = path.join("src", "icons");
+const iconsDir = path.join("public", "icons");
 if (existsSync(iconsDir)) {
   const { readdir, copyFile, mkdir } = await import("fs/promises");
   const outIconsDir = path.join(outdir, "icons");

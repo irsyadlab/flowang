@@ -6,10 +6,10 @@ import index from "./index.html";
 const isProd = process.env.NODE_ENV === "production";
 
 // In production, static files are served from dist/.
-// In development, they are served directly from src/.
+// In development, they are served directly from public/.
 const staticRoot = isProd
   ? path.join(import.meta.dir, "..", "dist")
-  : path.join(import.meta.dir);
+  : path.join(import.meta.dir, "..", "public");
 
 function serveStatic(filePath: string): Response | null {
   const full = path.join(staticRoot, filePath);

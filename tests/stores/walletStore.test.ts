@@ -17,10 +17,19 @@ function resetStores() {
 
 describe("Property 2: Wallet Balance Invariant", () => {
   beforeEach(async () => {
+    // Hapus DB lama agar tidak ada data bocor dari test lain
+    closeDB();
     resetStores();
+    await new Promise<void>((resolve) => {
+      const req = indexedDB.deleteDatabase("flowang-db");
+      req.onsuccess = () => resolve();
+      req.onerror = () => resolve(); // lanjut meski gagal
+      req.onblocked = () => resolve();
+    });
     await openDB();
     useUIStore.getState().setDbReady(true);
     await useWalletStore.getState().loadWallets();
+    await useTransactionStore.getState().loadTransactions();
   });
 
   afterEach(() => {

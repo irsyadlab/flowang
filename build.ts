@@ -134,6 +134,34 @@ if (existsSync(outdir)) {
 
 const start = performance.now();
 
+// Copy PWA static files (sw.js, manifest.json, icons/) to outdir
+const staticFiles = [
+  { src: path.join("src", "sw.js"), dest: path.join(outdir, "sw.js") },
+  { src: path.join("src", "manifest.json"), dest: path.join(outdir, "manifest.json") },
+];
+
+const iconsDir = path.join("src", "icons");
+if (existsSync(iconsDir)) {
+  const { readdir, copyFile, mkdir } = await import("fs/promises");
+  const outIconsDir = path.join(outdir, "icons");
+  await mkdir(outIconsDir, { recursive: true });
+  const iconFiles = await readdir(iconsDir);
+  for (const file of iconFiles) {
+    staticFiles.push({
+      src: path.join(iconsDir, file),
+      dest: path.join(outIconsDir, file),
+    });
+  }
+}
+
+const { copyFile: copy, mkdir } = await import("fs/promises");
+for (const { src, dest } of staticFiles) {
+  if (existsSync(src)) {
+    await mkdir(path.dirname(dest), { recursive: true });
+    await copy(src, dest);
+  }
+}
+
 // Scan for all HTML files in the project
 const entrypoints = [...new Bun.Glob("**.html").scanSync("src")]
   .map(a => path.resolve("src", a))
@@ -164,6 +192,58 @@ const outputTable = result.outputs.map(output => ({
 }));
 
 console.table(outputTable);
-const buildTime = (end - start).toFixed(2);
 
+// Post-process: update manifest.json icon paths to match Bun's hashed filenames
+const { readFile, writeFile } = await import("fs/promises");
+const distHtml = await readFile(path.join(outdir, "index.html"), "utf-8");
+
+// Extract hashed paths for both icon sizes
+const icon192Match = distHtml.match(/href="\.\/([^"]*icon-192[^"]*\.png)"/);
+const icon512Match = distHtml.match(/href="\.\/([^"]*icon-512[^"]*\.png)"/);
+
+const manifestPath = path.join(outdir, "manifest.json");
+if (existsSync(manifestPath) && (icon192Match || icon512Match)) {
+  const manifest = JSON.parse(await readFile(manifestPath, "utf-8"));
+  manifest.icons = [
+    icon192Match && {
+      src: `/${icon192Match[1]}`,
+      sizes: "192x192",
+      type: "image/png",
+      purpose: "any maskable",
+    },
+    icon512Match && {
+      src: `/${icon512Match[1]}`,
+      sizes: "512x512",
+      type: "image/png",
+      purpose: "any maskable",
+    },
+  ].filter(Boolean);
+  await writeFile(manifestPath, JSON.stringify(manifest, null, 2));
+  console.log(`\n📱 manifest.json updated with hashed icon paths`);
+}
+
+// Post-process: inject hashed asset URLs into sw.js PRECACHE_URLS
+// so the service worker pre-caches the full app shell on install.
+const swPath = path.join(outdir, "sw.js");
+if (existsSync(swPath)) {
+  // Collect all cacheable assets from the build output
+  const cacheableAssets = result.outputs
+    .filter((o) => ['entry-point', 'asset', 'chunk'].includes(o.kind))
+    .map((o) => `/${path.relative(outdir, o.path)}`)
+    .filter((p) => !p.endsWith('.map')); // skip sourcemaps
+
+  // Always include root and manifest
+  const precacheUrls = ['/', '/manifest.json', ...cacheableAssets]
+    .filter((v, i, a) => a.indexOf(v) === i); // dedupe
+
+  let swContent = await readFile(swPath, "utf-8");
+  swContent = swContent.replace(
+    /const PRECACHE_URLS = \[[\s\S]*?\];/,
+    `const PRECACHE_URLS = ${JSON.stringify(precacheUrls, null, 2)};`
+  );
+  await writeFile(swPath, swContent);
+  console.log(`📦 sw.js updated with ${precacheUrls.length} pre-cached URLs`);
+}
+
+const buildTime = (end - start).toFixed(2);
 console.log(`\n✅ Build completed in ${buildTime}ms\n`);

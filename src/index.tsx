@@ -1,9 +1,45 @@
 import { serve } from "bun";
+import { existsSync } from "fs";
+import path from "path";
 import index from "./index.html";
+
+const isProd = process.env.NODE_ENV === "production";
+
+// In production, static files are served from dist/.
+// In development, they are served directly from src/.
+const staticRoot = isProd
+  ? path.join(import.meta.dir, "..", "dist")
+  : path.join(import.meta.dir);
+
+function serveStatic(filePath: string): Response | null {
+  const full = path.join(staticRoot, filePath);
+  if (!existsSync(full)) return null;
+
+  const ext = path.extname(full);
+  const mimeTypes: Record<string, string> = {
+    ".json": "application/json",
+    ".js":   "application/javascript",
+    ".png":  "image/png",
+    ".svg":  "image/svg+xml",
+    ".ico":  "image/x-icon",
+    ".webp": "image/webp",
+  };
+  const contentType = mimeTypes[ext] ?? "application/octet-stream";
+
+  return new Response(Bun.file(full), {
+    headers: { "Content-Type": contentType },
+  });
+}
 
 const server = serve({
   routes: {
-    // Serve index.html for all unmatched routes.
+    "/sw.js":          () => serveStatic("sw.js") ?? new Response("Not found", { status: 404 }),
+    "/manifest.json":  () => serveStatic("manifest.json") ?? new Response("Not found", { status: 404 }),
+    "/icons/:file":    (req) => {
+      const file = req.params.file;
+      return serveStatic(`icons/${file}`) ?? new Response("Not found", { status: 404 });
+    },
+    // Serve index.html for all unmatched routes (SPA fallback)
     "/*": index,
   },
 

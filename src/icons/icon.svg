@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect width="512" height="512" rx="112" fill="#1a2035"/>
+  <!-- Stylized "F" lettermark with a flowing wave accent -->
+  <!-- Main F stem -->
+  <rect x="148" y="128" width="52" height="256" rx="16" fill="#ffffff"/>
+  <!-- Top bar of F -->
+  <rect x="148" y="128" width="200" height="52" rx="16" fill="#ffffff"/>
+  <!-- Middle bar of F -->
+  <rect x="148" y="228" width="160" height="48" rx="16" fill="#ffffff"/>
+  <!-- Accent dot / coin -->
+  <circle cx="370" cy="352" r="40" fill="#6c8cff" opacity="0.9"/>
+  <path d="M358 340 Q370 328 382 340 Q394 352 382 364 Q370 376 358 364 Q346 352 358 340Z" fill="#1a2035" opacity="0.5"/>
+</svg>

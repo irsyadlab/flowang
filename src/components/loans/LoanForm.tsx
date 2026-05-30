@@ -6,14 +6,18 @@ import { localDateStr } from '@/lib/utils';
 import type { LoanEntry, LoanEntryFormData } from '@/types';
 import {
   Form,
+  FormControl,
   FormField,
   FormItem,
   FormMessage,
 } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
 import { DatePickerSheet, formatDateShortID } from '@/components/ui/date-picker-sheet';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import ContactCombobox from '@/components/loans/ContactCombobox';
 import { TrendingUp, TrendingDown } from 'lucide-react';
+import { useWalletStore } from '@/stores/walletStore';
+import { useCategoryStore } from '@/stores/categoryStore';
 
 const loanEntrySchema = z.object({
   contactId: z.string().min(1, 'Kontak wajib dipilih'),
@@ -23,6 +27,26 @@ const loanEntrySchema = z.object({
   direction: z.enum(['lend', 'borrow'], { required_error: 'Arah hutang wajib dipilih' }),
   date: z.string().min(1, 'Tanggal wajib diisi'),
   note: z.string().optional(),
+  categoryId: z.string().optional(),
+  createTransaction: z.boolean().default(false),
+  walletId: z.string().optional(),
+}).superRefine((data, ctx) => {
+  if (data.createTransaction) {
+    if (!data.walletId || data.walletId.trim() === '') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Wallet wajib dipilih saat mencatat sebagai transaksi',
+        path: ['walletId'],
+      });
+    }
+    if (!data.categoryId || data.categoryId.trim() === '') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Kategori wajib diisi saat mencatat sebagai transaksi',
+        path: ['categoryId'],
+      });
+    }
+  }
 });
 
 type LoanEntryFormValues = z.infer<typeof loanEntrySchema>;
@@ -58,7 +82,11 @@ function formatAmount(value: number): string {
 }
 
 export default function LoanForm({ mode, defaultContactId, entry, onSubmit }: LoanFormProps) {
-  const today = localDateStr();  const form = useForm<LoanEntryFormValues>({
+  const today = localDateStr();
+  const wallets = useWalletStore((s) => s.wallets);
+  const categories = useCategoryStore((s) => s.categories);
+
+  const form = useForm<LoanEntryFormValues>({
     resolver: zodResolver(loanEntrySchema),
     defaultValues: {
       contactId: entry?.contactId || defaultContactId || '',
@@ -66,18 +94,32 @@ export default function LoanForm({ mode, defaultContactId, entry, onSubmit }: Lo
       direction: entry?.direction || 'lend',
       date: entry?.date || today,
       note: entry?.note || '',
+      categoryId: entry?.categoryId || '',
+      createTransaction: false,
+      walletId: '',
     },
   });
 
   const watchAmount = useWatch({ control: form.control, name: 'amount' });
   const watchDirection = useWatch({ control: form.control, name: 'direction' });
+  const watchCreateTransaction = useWatch({ control: form.control, name: 'createTransaction' });
 
   const [displayAmount, setDisplayAmount] = useState(
     entry?.amount ? formatAmount(entry.amount) : ''
   );
 
   const handleSubmit = form.handleSubmit(async (data) => {
-    onSubmit(data as LoanEntryFormData);
+    const formData: LoanEntryFormData = {
+      contactId: data.contactId,
+      amount: data.amount,
+      direction: data.direction,
+      date: data.date,
+      note: data.note,
+      categoryId: data.categoryId || undefined,
+      createTransaction: data.createTransaction,
+      walletId: data.walletId || undefined,
+    };
+    onSubmit(formData);
   });
 
   const activeDir = DIRECTION_OPTIONS.find((d) => d.value === watchDirection);
@@ -197,6 +239,35 @@ export default function LoanForm({ mode, defaultContactId, entry, onSubmit }: Lo
               )}
             />
 
+            {/* Category (always visible, optional) */}
+            <FormField
+              control={form.control}
+              name="categoryId"
+              render={({ field }) => (
+                <FormItem className="p-0">
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <span className="w-24 shrink-0 text-xs font-medium text-muted-foreground">Kategori</span>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value || ''}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="border-0 shadow-none p-0 h-auto text-sm font-medium focus:ring-0 bg-transparent">
+                          <SelectValue placeholder="Opsional..." />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {categories.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <FormMessage className="px-4 pb-2 text-xs" />
+                </FormItem>
+              )}
+            />
+
             {/* Note */}
             <FormField
               control={form.control}
@@ -217,6 +288,99 @@ export default function LoanForm({ mode, defaultContactId, entry, onSubmit }: Lo
               )}
             />
           </div>
+
+          {/* Toggle: Catat sebagai transaksi */}
+          <FormField
+            control={form.control}
+            name="createTransaction"
+            render={({ field }) => (
+              <FormItem className="p-0">
+                <div className="rounded-2xl border border-border bg-card px-4 py-3">
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={field.value}
+                    onClick={() => {
+                      field.onChange(!field.value);
+                      if (field.value) {
+                        // Reset wallet and category when toggling off
+                        form.setValue('walletId', '');
+                        form.clearErrors(['walletId', 'categoryId']);
+                      }
+                    }}
+                    className="flex w-full items-center justify-between"
+                  >
+                    <span className="text-sm font-medium text-foreground">Catat sebagai transaksi</span>
+                    <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      field.value ? 'bg-primary' : 'bg-muted'
+                    }`}>
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                        field.value ? 'translate-x-6' : 'translate-x-1'
+                      }`} />
+                    </div>
+                  </button>
+                </div>
+              </FormItem>
+            )}
+          />
+
+          {/* Conditional fields when createTransaction is ON */}
+          {watchCreateTransaction && (
+            <div className="rounded-2xl border border-border bg-card divide-y divide-border overflow-hidden">
+
+              {/* Wallet selector */}
+              <FormField
+                control={form.control}
+                name="walletId"
+                render={({ field }) => (
+                  <FormItem className="p-0">
+                    <div className="flex items-center gap-3 px-4 py-3">
+                      <span className="w-24 shrink-0 text-xs font-medium text-muted-foreground">Wallet</span>
+                      <Select onValueChange={field.onChange} value={field.value || ''}>
+                        <FormControl>
+                          <SelectTrigger className="border-0 shadow-none p-0 h-auto text-sm font-medium focus:ring-0 bg-transparent">
+                            <SelectValue placeholder="Pilih wallet" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {wallets.map((w) => (
+                            <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <FormMessage className="px-4 pb-2 text-xs" />
+                  </FormItem>
+                )}
+              />
+
+              {/* Category selector (required when toggle is ON) */}
+              <FormField
+                control={form.control}
+                name="categoryId"
+                render={({ field }) => (
+                  <FormItem className="p-0">
+                    <div className="flex items-center gap-3 px-4 py-3">
+                      <span className="w-24 shrink-0 text-xs font-medium text-muted-foreground">Kategori</span>
+                      <Select onValueChange={field.onChange} value={field.value || ''}>
+                        <FormControl>
+                          <SelectTrigger className="border-0 shadow-none p-0 h-auto text-sm font-medium focus:ring-0 bg-transparent">
+                            <SelectValue placeholder="Pilih kategori" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {categories.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <FormMessage className="px-4 pb-2 text-xs" />
+                  </FormItem>
+                )}
+              />
+            </div>
+          )}
 
           <Button
             type="submit"

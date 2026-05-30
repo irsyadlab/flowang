@@ -30,13 +30,54 @@ export async function getEntriesByContactId(db: IDBDatabase, contactId: string):
   return requestToPromise(request);
 }
 
+/**
+ * Validates that a Category with the given id exists in the `categories` object store.
+ * Must be called within an IDBTransaction that includes the `categories` store.
+ * Rejects with an error if the category is not found.
+ */
+function validateCategoryId(
+  categoriesStore: IDBObjectStore,
+  categoryId: string
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const request = categoriesStore.get(categoryId);
+    request.onsuccess = () => {
+      if (request.result == null) {
+        reject(new Error(`Category with id "${categoryId}" not found`));
+      } else {
+        resolve();
+      }
+    };
+    request.onerror = () =>
+      reject(new Error(`Category validation failed: ${request.error?.message || 'Unknown error'}`));
+  });
+}
+
 export async function addEntry(db: IDBDatabase, entry: LoanEntry): Promise<void> {
   return new Promise((resolve, reject) => {
-    const tx = db.transaction('loan_entries', 'readwrite');
-    const store = tx.objectStore('loan_entries');
-    const request = store.add(entry);
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(new Error(`Add entry failed: ${request.error?.message || 'Unknown error'}`));
+    const storeNames: string[] = ['loan_entries'];
+    if (entry.categoryId) storeNames.push('categories');
+
+    const tx = db.transaction(storeNames, 'readwrite');
+    tx.onerror = () => reject(new Error(`Add entry failed: ${tx.error?.message || 'Unknown error'}`));
+    tx.onabort = () => reject(new Error('Transaction aborted'));
+
+    const run = async () => {
+      try {
+        if (entry.categoryId) {
+          const categoriesStore = tx.objectStore('categories');
+          await validateCategoryId(categoriesStore, entry.categoryId);
+        }
+        const store = tx.objectStore('loan_entries');
+        store.add(entry);
+        tx.oncomplete = () => resolve();
+      } catch (err) {
+        tx.abort();
+        reject(err);
+      }
+    };
+
+    run();
   });
 }
 

@@ -95,7 +95,8 @@ export async function deleteCategory(db: IDBDatabase, id: string): Promise<void>
 // Seed default categories if empty
 export async function seedDefaultCategories(db: IDBDatabase): Promise<void> {
   const existing = await getAllCategories(db);
-  if (existing.length > 0) return; // Already seeded
+  const hasDefaultCategories = existing.some((c) => c.isDefault === true);
+  if (hasDefaultCategories) return; // Already seeded
 
   const now = localISOString();
   for (const cat of DEFAULT_CATEGORIES) {

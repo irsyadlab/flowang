@@ -7,7 +7,7 @@ import fc from "fast-check";
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { openDB, closeDB } from "../../src/db/db";
 import * as loanEntryDb from "../../src/db/loanEntryDb";
-import { arbitraryLoanEntry } from "../helpers/arbitraries";
+import { arbitraryActiveLoanEntry } from "../helpers/arbitraries";
 import type { LoanEntry } from "../../src/types";
 
 describe("Property 4: Loan Entry Storage Round-Trip", () => {
@@ -23,7 +23,7 @@ describe("Property 4: Loan Entry Storage Round-Trip", () => {
 
   it("entry round-trip: saved data matches input with status active (100 runs)", async () => {
     await fc.assert(
-      fc.asyncProperty(arbitraryLoanEntry, async (entry: LoanEntry) => {
+      fc.asyncProperty(arbitraryActiveLoanEntry, async (entry: LoanEntry) => {
         // Force status to active for round-trip test
         const activeEntry = { ...entry, status: "active" as const, settledAt: undefined };
         await loanEntryDb.addEntry(db, activeEntry);
@@ -56,7 +56,7 @@ describe("Property 8: Mark Settled Toggle Round-Trip", () => {
 
   it("toggle twice returns to original status (100 runs)", async () => {
     await fc.assert(
-      fc.asyncProperty(arbitraryLoanEntry, async (entry: LoanEntry) => {
+      fc.asyncProperty(arbitraryActiveLoanEntry, async (entry: LoanEntry) => {
         // Start with active
         const activeEntry = { ...entry, status: "active" as const, settledAt: undefined };
         await loanEntryDb.addEntry(db, activeEntry);
@@ -91,7 +91,7 @@ describe("Property 9: Mark All Settled Bulk Operation", () => {
     await fc.assert(
       fc.asyncProperty(
         fc.uuid(),
-        fc.array(arbitraryLoanEntry, { minLength: 1, maxLength: 15 }),
+        fc.array(arbitraryActiveLoanEntry, { minLength: 1, maxLength: 15 }),
         async (contactId: string, entries: LoanEntry[]) => {
           const contactEntries = entries.map((e) => ({
             ...e,
@@ -129,7 +129,7 @@ describe("Property 13: Delete Entry Removes Permanently", () => {
 
   it("after deleteEntry, getEntryById returns undefined (100 runs)", async () => {
     await fc.assert(
-      fc.asyncProperty(arbitraryLoanEntry, async (entry: LoanEntry) => {
+      fc.asyncProperty(arbitraryActiveLoanEntry, async (entry: LoanEntry) => {
         await loanEntryDb.addEntry(db, entry);
         const before = await loanEntryDb.getEntryById(db, entry.id);
         expect(before).toBeDefined();

@@ -63,6 +63,10 @@ export interface LoanEntry {
   settledAt?: string;   // ISO 8601, diisi saat status → 'settled'
   createdAt: string;    // ISO 8601
   updatedAt: string;    // ISO 8601
+  // Field baru (Requirements 7.3)
+  categoryId?: string;           // FK → Category.id (opsional)
+  linkedTransactionId?: string;  // FK → Transaction.id (opsional, null jika tidak ada)
+  remainingAmount: number;       // dihitung: amount - sum(repayments.amount)
 }
 
 export interface ContactSummary {
@@ -77,5 +81,42 @@ export interface LoanEntryFormData {
   amount: number;
   direction: LoanDirection;
   date: string;
+  note?: string;
+  // Field baru (Requirements 7.3)
+  categoryId?: string;
+  // Transaction integration fields
+  createTransaction: boolean;    // toggle "Catat sebagai transaksi"
+  walletId?: string;             // wajib jika createTransaction = true
+}
+
+// Repayment types (Requirements 7.1)
+export interface Repayment {
+  id: string;                    // UUID v4
+  loanEntryId: string;           // FK → LoanEntry.id
+  amount: number;                // > 0, maks 999_999_999_999
+  categoryId?: string;           // FK → Category.id (opsional)
+  linkedTransactionId?: string;  // FK → Transaction.id (opsional, null jika tidak ada)
+  date: string;                  // YYYY-MM-DD
+  note?: string;                 // opsional
+  createdAt: string;             // ISO 8601
+  updatedAt: string;             // ISO 8601
+}
+
+export interface RepaymentFormData {
+  loanEntryId: string;
+  amount: number;
+  date: string;
+  note?: string;
+  categoryId?: string;
+  // Transaction integration fields
+  createTransaction: boolean;    // toggle "Catat sebagai transaksi"
+  walletId?: string;             // wajib jika createTransaction = true
+}
+
+export interface LinkedTransactionInput {
+  walletId: string;
+  categoryId?: string;
+  date: string;
+  amount: number;
   note?: string;
 }

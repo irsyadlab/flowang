@@ -1,7 +1,7 @@
 // Feature: finance-tracker, Property 16: Wallet Transaction Completeness
 import { describe, it, expect } from "bun:test";
 import fc from "fast-check";
-import type { TransactionType } from "../../src/types";
+import type { Transaction, TransactionType } from "../../src/types";
 
 function filterWalletTransactions(transactions: Transaction[], walletId: string): Transaction[] {
   return transactions.filter((t) => t.walletId === walletId || t.toWalletId === walletId);

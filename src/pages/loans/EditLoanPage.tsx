@@ -33,6 +33,7 @@ export default function EditLoanPage() {
       direction: data.direction,
       date: data.date,
       note: data.note,
+      categoryId: data.categoryId,
     });
     navigate(`/loans/${contactId}`);
   };

@@ -79,7 +79,7 @@ export default function EditTransactionPage() {
 
       <TransactionForm
         initialData={{
-          type: transaction.type,
+          type: transaction.type as 'income' | 'expense' | 'transfer',
           amount: transaction.amount,
           walletId: transaction.walletId,
           toWalletId: transaction.toWalletId ?? "",

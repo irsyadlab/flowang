@@ -1,11 +1,13 @@
 import { create } from 'zustand';
-import type { LoanEntry } from '../types';
+import type { LoanEntry, LoanEntryFormData, LinkedTransactionInput } from '../types';
 import * as loanEntryDb from '../db/loanEntryDb';
 import { getDB } from '../db/db';
 import { useUIStore } from './uiStore';
 import { localISOString } from '../lib/utils';
 import { useSyncStore } from '../sync/syncStore';
 import { onLocalChange } from '../sync/syncManager';
+import { createLoanEntryWithTransaction, deleteLoanEntryWithCascade } from '../lib/transactionIntegrator';
+import { toast } from 'sonner';
 
 interface LoanEntryState {
   entries: LoanEntry[];
@@ -15,7 +17,7 @@ interface LoanEntryState {
 
 interface LoanEntryActions {
   loadEntries: () => Promise<void>;
-  addEntry: (data: Omit<LoanEntry, 'id' | 'status' | 'settledAt' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  addEntry: (data: LoanEntryFormData) => Promise<void>;
   updateEntry: (id: string, data: Partial<Omit<LoanEntry, 'id' | 'createdAt'>>) => Promise<void>;
   deleteEntry: (id: string) => Promise<void>;
   toggleEntryStatus: (id: string) => Promise<void>;
@@ -59,11 +61,28 @@ export const useLoanEntryStore = create<LoanEntryState & LoanEntryActions>((set,
         status: 'active',
         date: data.date,
         note: data.note,
+        categoryId: data.categoryId,
+        remainingAmount: data.amount,
+        linkedTransactionId: undefined,
         createdAt: now,
         updatedAt: now,
       };
 
-      await loanEntryDb.addEntry(db, entry);
+      if (data.createTransaction && data.walletId) {
+        // Build LinkedTransactionInput and call Transaction_Integrator atomically
+        const transactionData: LinkedTransactionInput = {
+          walletId: data.walletId,
+          categoryId: data.categoryId,
+          date: data.date,
+          amount: data.amount,
+          note: data.note,
+        };
+        await createLoanEntryWithTransaction(db, entry, transactionData);
+      } else {
+        // No transaction integration — save entry directly
+        await loanEntryDb.addEntry(db, entry);
+      }
+
       set((state) => ({
         entries: [...state.entries, entry],
         isLoading: false,
@@ -72,7 +91,9 @@ export const useLoanEntryStore = create<LoanEntryState & LoanEntryActions>((set,
         onLocalChange('loan_entries', entry);
       }
     } catch (error) {
-      set({ error: (error as Error).message, isLoading: false });
+      const message = (error as Error).message;
+      toast.error(message);
+      set({ error: message, isLoading: false });
     }
   },
 
@@ -114,11 +135,19 @@ export const useLoanEntryStore = create<LoanEntryState & LoanEntryActions>((set,
       const db = getDB();
       if (!db) throw new Error('Database not initialized');
 
-      await loanEntryDb.deleteEntry(db, id);
+      // Use cascade delete to also remove all related Repayments and Linked_Transactions atomically
+      // Requirements: 2.7, 6.3
+      await deleteLoanEntryWithCascade(db, id);
       set((state) => ({
         entries: state.entries.filter((e) => e.id !== id),
         isLoading: false,
       }));
+
+      // Reload repayments to keep state in sync after cascade delete
+      // Lazy import to avoid circular dependency (loanRepaymentStore imports loanEntryStore)
+      const { useLoanRepaymentStore } = await import('./loanRepaymentStore');
+      useLoanRepaymentStore.getState().loadRepayments();
+
       if (useSyncStore.getState().syncKey) {
         onLocalChange('loan_entries', { id, _deleted: true });
       }

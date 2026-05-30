@@ -29,7 +29,7 @@ export async function addWallet(db: IDBDatabase, wallet: Wallet): Promise<void> 
   const tx = db.transaction('wallets', 'readwrite');
   const store = tx.objectStore('wallets');
   const request = store.add(wallet);
-  return requestToPromise(request);
+  await requestToPromise(request);
 }
 
 // Update existing wallet
@@ -37,7 +37,7 @@ export async function updateWallet(db: IDBDatabase, wallet: Wallet): Promise<voi
   const tx = db.transaction('wallets', 'readwrite');
   const store = tx.objectStore('wallets');
   const request = store.put(wallet);
-  return requestToPromise(request);
+  await requestToPromise(request);
 }
 
 // Delete wallet

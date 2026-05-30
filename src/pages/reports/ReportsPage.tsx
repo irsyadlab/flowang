@@ -1,24 +1,45 @@
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { useTransactionStore } from "@/stores/transactionStore";
 import { useWalletStore } from "@/stores/walletStore";
 import { useCategoryStore } from "@/stores/categoryStore";
+import { useLoanEntries } from "@/hooks/useLoanEntries";
+import { useLoanRepayments } from "@/hooks/useLoanRepayments";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import RealtimeReport from "@/components/reports/RealtimeReport";
 import MonthlyReport from "@/components/reports/MonthlyReport";
 import CustomReport from "@/components/reports/CustomReport";
+import LoanReportSection from "@/components/loans/LoanReportSection";
 import ErrorMessage from "@/components/shared/ErrorMessage";
 import LoadingSpinner from "@/components/shared/LoadingSpinner";
 
 export default function ReportsPage() {
+  const navigate = useNavigate();
   const { isLoading: txLoading, error: txError, loadTransactions } = useTransactionStore();
   const { loadWallets } = useWalletStore();
   const { loadCategories } = useCategoryStore();
+  const { entries, loadEntries } = useLoanEntries();
+  const { repayments, loadRepayments } = useLoanRepayments();
 
   useEffect(() => {
     loadTransactions();
     loadWallets();
     loadCategories();
-  }, [loadTransactions, loadWallets, loadCategories]);
+    loadEntries();
+    loadRepayments();
+  }, [loadTransactions, loadWallets, loadCategories, loadEntries, loadRepayments]);
+
+  const handleNavigateToContact = useCallback(
+    (contactId: string) => {
+      try {
+        navigate(`/loans/${contactId}`);
+      } catch {
+        toast.error("Gagal membuka halaman detail. Silakan coba lagi.");
+      }
+    },
+    [navigate]
+  );
 
   if (txLoading) {
     return <LoadingSpinner fullscreen />;
@@ -48,13 +69,28 @@ export default function ReportsPage() {
             Custom
           </TabsTrigger>
         </TabsList>
-        <TabsContent value="realtime" className="mt-4">
+        <TabsContent value="realtime" className="mt-4 space-y-4">
+          <LoanReportSection
+            entries={entries}
+            repayments={repayments}
+            onNavigateToContact={handleNavigateToContact}
+          />
           <RealtimeReport />
         </TabsContent>
-        <TabsContent value="monthly" className="mt-4">
+        <TabsContent value="monthly" className="mt-4 space-y-4">
+          <LoanReportSection
+            entries={entries}
+            repayments={repayments}
+            onNavigateToContact={handleNavigateToContact}
+          />
           <MonthlyReport />
         </TabsContent>
-        <TabsContent value="custom" className="mt-4">
+        <TabsContent value="custom" className="mt-4 space-y-4">
+          <LoanReportSection
+            entries={entries}
+            repayments={repayments}
+            onNavigateToContact={handleNavigateToContact}
+          />
           <CustomReport />
         </TabsContent>
       </Tabs>

@@ -7,7 +7,7 @@ import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { openDB, closeDB } from "../../src/db/db";
 import * as loanContactDb from "../../src/db/loanContactDb";
 import * as loanEntryDb from "../../src/db/loanEntryDb";
-import { arbitraryLoanContact, arbitraryLoanEntry } from "../helpers/arbitraries";
+import { arbitraryLoanContact, arbitraryActiveLoanEntry } from "../helpers/arbitraries";
 import type { LoanContact, LoanEntry } from "../../src/types";
 
 describe("Property 1: Contact Storage Round-Trip", () => {
@@ -81,7 +81,7 @@ describe("Property 14: Delete Contact Cascades to Entries", () => {
     await fc.assert(
       fc.asyncProperty(
         arbitraryLoanContact,
-        fc.array(arbitraryLoanEntry, { minLength: 1, maxLength: 10 }),
+        fc.array(arbitraryActiveLoanEntry, { minLength: 1, maxLength: 10 }),
         async (contact: LoanContact, entries: LoanEntry[]) => {
           await loanContactDb.addContact(db, contact);
 

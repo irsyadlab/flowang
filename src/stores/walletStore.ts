@@ -163,12 +163,12 @@ export const useWalletStore = create<WalletState & WalletActions>((set, get) => 
       
       // Check if wallet has any transactions
       const allTransactions = await getAllTransactions(db);
-      const hasTransactions = allTransactions.some(
+      const linkedTransactions = allTransactions.filter(
         (t) => t.walletId === id || t.toWalletId === id
       );
       
-      if (hasTransactions) {
-        throw new Error('Wallet tidak dapat dihapus karena masih memiliki transaksi');
+      if (linkedTransactions.length > 0) {
+        throw new Error(`Wallet tidak dapat dihapus karena masih memiliki ${linkedTransactions.length} transaksi terkait`);
       }
       
       await walletDb.deleteWallet(db, id);

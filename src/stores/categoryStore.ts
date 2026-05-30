@@ -125,7 +125,87 @@ export const useCategoryStore = create<CategoryState & CategoryActions>((set, ge
         throw new Error('Kategori masih digunakan');
       }
       
-      await categoryDb.deleteCategory(db, id);
+      // Cascade set null: update all LoanEntry and Repayment records that use this categoryId,
+      // then delete the category — all in one atomic IDBTransaction (Requirements 6.4)
+      await new Promise<void>((resolve, reject) => {
+        const tx = db.transaction(['categories', 'loan_entries', 'loan_repayments'], 'readwrite');
+        tx.onerror = () =>
+          reject(new Error(`Delete category failed: ${tx.error?.message || 'Unknown error'}`));
+        tx.onabort = () => reject(new Error('Transaction aborted'));
+
+        const loanEntriesStore = tx.objectStore('loan_entries');
+        const loanRepaymentsStore = tx.objectStore('loan_repayments');
+        const categoriesStore = tx.objectStore('categories');
+
+        let pendingOps = 0;
+        let allCursorsComplete = false;
+
+        const checkDone = () => {
+          if (allCursorsComplete && pendingOps === 0) {
+            categoriesStore.delete(id);
+            tx.oncomplete = () => resolve();
+          }
+        };
+
+        // Cascade set null on loan_entries
+        const loanEntriesCursor = loanEntriesStore.openCursor();
+        loanEntriesCursor.onsuccess = (event) => {
+          const cursor = (event.target as IDBRequest<IDBCursorWithValue | null>).result;
+          if (cursor) {
+            const entry = cursor.value as Record<string, unknown>;
+            if (entry['categoryId'] === id) {
+              entry['categoryId'] = undefined;
+              pendingOps++;
+              const updateReq = cursor.update(entry);
+              updateReq.onsuccess = () => {
+                pendingOps--;
+                checkDone();
+              };
+              updateReq.onerror = () => {
+                tx.abort();
+                reject(new Error(`Failed to update loan entry: ${updateReq.error?.message || 'Unknown error'}`));
+              };
+            }
+            cursor.continue();
+          } else {
+            // loan_entries cursor done; now open loan_repayments cursor
+            const repaymentsCursor = loanRepaymentsStore.openCursor();
+            repaymentsCursor.onsuccess = (repEvent) => {
+              const repCursor = (repEvent.target as IDBRequest<IDBCursorWithValue | null>).result;
+              if (repCursor) {
+                const repayment = repCursor.value as Record<string, unknown>;
+                if (repayment['categoryId'] === id) {
+                  repayment['categoryId'] = undefined;
+                  pendingOps++;
+                  const updateReq = repCursor.update(repayment);
+                  updateReq.onsuccess = () => {
+                    pendingOps--;
+                    checkDone();
+                  };
+                  updateReq.onerror = () => {
+                    tx.abort();
+                    reject(new Error(`Failed to update repayment: ${updateReq.error?.message || 'Unknown error'}`));
+                  };
+                }
+                repCursor.continue();
+              } else {
+                // Both cursors done
+                allCursorsComplete = true;
+                checkDone();
+              }
+            };
+            repaymentsCursor.onerror = () => {
+              tx.abort();
+              reject(new Error(`Cursor error on loan_repayments: ${repaymentsCursor.error?.message || 'Unknown error'}`));
+            };
+          }
+        };
+        loanEntriesCursor.onerror = () => {
+          tx.abort();
+          reject(new Error(`Cursor error on loan_entries: ${loanEntriesCursor.error?.message || 'Unknown error'}`));
+        };
+      });
+
       set((state) => ({
         categories: state.categories.filter((c) => c.id !== id),
         isLoading: false,

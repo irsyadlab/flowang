@@ -37,6 +37,9 @@ jobs:
           script: |
             set -e
 
+            # Ensure bun is on PATH for non-interactive SSH sessions
+            export PATH="$HOME/.bun/bin:$PATH"
+
             cd /var/www/flowang
 
             # Pull latest code

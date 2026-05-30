@@ -32,6 +32,7 @@ export const transactionSchema = z.object({
   toWalletId: z.string().optional(),
   categoryId: z.string().optional(),
   date: z.string().min(1, 'Tanggal wajib diisi'),
+  time: z.string().optional(),
   note: z.string().optional(),
 }).superRefine((data, ctx) => {
   if (data.type === 'transfer') {

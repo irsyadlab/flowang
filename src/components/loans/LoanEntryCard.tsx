@@ -94,7 +94,7 @@ export default function LoanEntryCard({
               </p>
             )}
 
-            <p className="text-xs text-muted-foreground mt-0.5">{formatDate(entry.date)}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{formatDate(entry.date, entry.time)}</p>
             <p className="text-xs text-muted-foreground/70 mt-0.5">{categoryName}</p>
 
             {entry.note && (

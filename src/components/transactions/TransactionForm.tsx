@@ -7,8 +7,9 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from "@/component
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { DatePickerSheet, formatDateShortID } from "@/components/ui/date-picker-sheet";
+import { TimePickerSheet, formatTimeDisplay } from "@/components/ui/time-picker-sheet";
 import { TrendingUp, TrendingDown, ArrowLeftRight } from "lucide-react";
-import { localDateStr } from "@/lib/utils";
+import { localDateStr, localTimeStr } from "@/lib/utils";
 import CategoryCombobox from "@/components/transactions/CategoryCombobox";
 
 interface TransactionFormProps {
@@ -43,6 +44,7 @@ export default function TransactionForm({ initialData, onSubmit, submitLabel = "
       toWalletId: "",
       categoryId: "",
       date: today,
+      time: localTimeStr(),
       note: "",
     },
   });
@@ -50,6 +52,7 @@ export default function TransactionForm({ initialData, onSubmit, submitLabel = "
   const watchType = useWatch({ control: form.control, name: "type" });
   const watchWalletId = useWatch({ control: form.control, name: "walletId" });
   const watchAmount = useWatch({ control: form.control, name: "amount" });
+  const watchTime = useWatch({ control: form.control, name: "time" });
   const isTransfer = watchType === "transfer";
 
   const [displayAmount, setDisplayAmount] = useState(
@@ -215,13 +218,13 @@ export default function TransactionForm({ initialData, onSubmit, submitLabel = "
             />
           )}
 
-          {/* Date */}
+          {/* Date + Time */}
           <FormField
             control={form.control}
             name="date"
             render={({ field }) => (
               <FormItem className="p-0">
-                <div className="flex items-center gap-3 px-4 py-3">
+                <div className="flex items-center justify-between gap-3 px-4 py-3">
                   <span className="w-24 shrink-0 text-xs font-medium text-muted-foreground">Tanggal</span>
                   <DatePickerSheet
                     value={field.value || today}
@@ -229,6 +232,15 @@ export default function TransactionForm({ initialData, onSubmit, submitLabel = "
                     trigger={
                       <span className="flex-1 text-sm font-medium text-foreground">
                         {formatDateShortID(field.value || today)}
+                      </span>
+                    }
+                  />
+                  <TimePickerSheet
+                    value={watchTime || ""}
+                    onChange={(v) => form.setValue("time", v)}
+                    trigger={
+                      <span className="text-sm font-medium text-foreground tabular-nums">
+                        {watchTime ? formatTimeDisplay(watchTime) : <span className="text-muted-foreground/50 text-xs">Jam</span>}
                       </span>
                     }
                   />

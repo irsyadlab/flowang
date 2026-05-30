@@ -26,6 +26,7 @@ export interface Transaction {
   toWalletId?: string;  // FK → Wallet.id (hanya untuk transfer)
   categoryId?: string;  // FK → Category.id (wajib untuk income/expense)
   date: string;         // ISO 8601 date string (YYYY-MM-DD)
+  time?: string;        // opsional, format HH:mm
   note?: string;
   isCorrection?: boolean;  // true untuk transaksi koreksi saldo
   isLoanLinked?: boolean;  // true untuk transaksi yang terhubung ke hutang/piutang
@@ -60,6 +61,7 @@ export interface LoanEntry {
   direction: LoanDirection;
   status: LoanStatus;   // default: 'active'
   date: string;         // YYYY-MM-DD
+  time?: string;        // opsional, format HH:mm
   note?: string;        // opsional
   settledAt?: string;   // ISO 8601, diisi saat status → 'settled'
   createdAt: string;    // ISO 8601
@@ -82,6 +84,7 @@ export interface LoanEntryFormData {
   amount: number;
   direction: LoanDirection;
   date: string;
+  time?: string;
   note?: string;
   // Field baru (Requirements 7.3)
   categoryId?: string;
@@ -98,6 +101,7 @@ export interface Repayment {
   categoryId?: string;           // FK → Category.id (opsional)
   linkedTransactionId?: string;  // FK → Transaction.id (opsional, null jika tidak ada)
   date: string;                  // YYYY-MM-DD
+  time?: string;                 // opsional, format HH:mm
   note?: string;                 // opsional
   createdAt: string;             // ISO 8601
   updatedAt: string;             // ISO 8601
@@ -107,6 +111,7 @@ export interface RepaymentFormData {
   loanEntryId: string;
   amount: number;
   date: string;
+  time?: string;
   note?: string;
   categoryId?: string;
   // Transaction integration fields
@@ -118,6 +123,7 @@ export interface LinkedTransactionInput {
   walletId: string;
   categoryId?: string;
   date: string;
+  time?: string;
   amount: number;
   note?: string;
 }

@@ -15,14 +15,15 @@ export function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-// Format date string ke format Indonesia
-export function formatDate(dateString: string): string {
+// Format date string ke format Indonesia, dengan waktu opsional (HH:mm)
+export function formatDate(dateString: string, time?: string): string {
   const date = new Date(dateString);
-  return new Intl.DateTimeFormat('id-ID', {
+  const formatted = new Intl.DateTimeFormat('id-ID', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
   }).format(date);
+  return time ? `${formatted} · ${time}` : formatted;
 }
 
 /**
@@ -34,6 +35,14 @@ export function localDateStr(date: Date = new Date()): string {
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
+}
+
+/**
+ * Returns current time as HH:mm in local time.
+ */
+export function localTimeStr(date: Date = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 /**

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { localDateStr } from '@/lib/utils';
+import { localDateStr, localTimeStr } from '@/lib/utils';
 import type { LoanEntry, LoanEntryFormData } from '@/types';
 import {
   Form,
@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
 import { DatePickerSheet, formatDateShortID } from '@/components/ui/date-picker-sheet';
+import { TimePickerSheet, formatTimeDisplay } from '@/components/ui/time-picker-sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import ContactCombobox from '@/components/loans/ContactCombobox';
 import { TrendingUp, TrendingDown } from 'lucide-react';
@@ -26,6 +27,7 @@ const loanEntrySchema = z.object({
     .max(999_999_999_999, 'Jumlah melebihi batas maksimum'),
   direction: z.enum(['lend', 'borrow'], { required_error: 'Arah hutang wajib dipilih' }),
   date: z.string().min(1, 'Tanggal wajib diisi'),
+  time: z.string().optional(),
   note: z.string().optional(),
   categoryId: z.string().optional(),
   createTransaction: z.boolean().default(false),
@@ -93,6 +95,7 @@ export default function LoanForm({ mode, defaultContactId, entry, onSubmit }: Lo
       amount: entry?.amount || 0,
       direction: entry?.direction || 'lend',
       date: entry?.date || today,
+      time: entry?.time || localTimeStr(),
       note: entry?.note || '',
       categoryId: entry?.categoryId || '',
       createTransaction: false,
@@ -103,6 +106,7 @@ export default function LoanForm({ mode, defaultContactId, entry, onSubmit }: Lo
   const watchAmount = useWatch({ control: form.control, name: 'amount' });
   const watchDirection = useWatch({ control: form.control, name: 'direction' });
   const watchCreateTransaction = useWatch({ control: form.control, name: 'createTransaction' });
+  const watchTime = useWatch({ control: form.control, name: 'time' });
 
   const [displayAmount, setDisplayAmount] = useState(
     entry?.amount ? formatAmount(entry.amount) : ''
@@ -114,6 +118,7 @@ export default function LoanForm({ mode, defaultContactId, entry, onSubmit }: Lo
       amount: data.amount,
       direction: data.direction,
       date: data.date,
+      time: data.time || undefined,
       note: data.note,
       categoryId: data.categoryId || undefined,
       createTransaction: data.createTransaction,
@@ -216,13 +221,13 @@ export default function LoanForm({ mode, defaultContactId, entry, onSubmit }: Lo
               )}
             />
 
-            {/* Date */}
+            {/* Date + Time */}
             <FormField
               control={form.control}
               name="date"
               render={({ field }) => (
                 <FormItem className="p-0">
-                  <div className="flex items-center gap-3 px-4 py-3">
+                  <div className="flex items-center justify-between gap-3 px-4 py-3">
                     <span className="w-24 shrink-0 text-xs font-medium text-muted-foreground">Tanggal</span>
                     <DatePickerSheet
                       value={field.value || today}
@@ -230,6 +235,15 @@ export default function LoanForm({ mode, defaultContactId, entry, onSubmit }: Lo
                       trigger={
                         <span className="flex-1 text-sm font-medium text-foreground">
                           {formatDateShortID(field.value || today)}
+                        </span>
+                      }
+                    />
+                    <TimePickerSheet
+                      value={watchTime || ''}
+                      onChange={(v) => form.setValue('time', v)}
+                      trigger={
+                        <span className="text-sm font-medium text-foreground tabular-nums">
+                          {watchTime ? formatTimeDisplay(watchTime) : <span className="text-muted-foreground/50 text-xs">Jam</span>}
                         </span>
                       }
                     />

@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTransactionStore } from "@/stores/transactionStore";
 import TransactionForm from "@/components/transactions/TransactionForm";
 import type { TransactionInput } from "@/lib/validators";
-import { localDateStr } from "@/lib/utils";
+import { localDateStr, localTimeStr } from "@/lib/utils";
 
 export default function NewTransactionPage() {
   const navigate = useNavigate();
@@ -22,6 +22,7 @@ export default function NewTransactionPage() {
         toWalletId: "",
         categoryId: "",
         date: today,
+        time: localTimeStr(),
         note: "",
       }
     : undefined;
@@ -34,6 +35,7 @@ export default function NewTransactionPage() {
       toWalletId: data.toWalletId || undefined,
       categoryId: data.categoryId || undefined,
       date: data.date,
+      time: data.time || undefined,
       note: data.note || undefined,
     });
     navigate("/transactions");

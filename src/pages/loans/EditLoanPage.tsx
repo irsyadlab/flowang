@@ -32,6 +32,7 @@ export default function EditLoanPage() {
       amount: data.amount,
       direction: data.direction,
       date: data.date,
+      time: data.time,
       note: data.note,
       categoryId: data.categoryId,
     });

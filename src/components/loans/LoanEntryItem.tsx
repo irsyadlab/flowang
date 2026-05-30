@@ -76,7 +76,7 @@ export default function LoanEntryItem({ entry, onToggleSettled, onDelete }: Loan
               {formatCurrency(entry.amount)}
             </p>
 
-            <p className="text-xs text-muted-foreground mt-0.5">{formatDate(entry.date)}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{formatDate(entry.date, entry.time)}</p>
             {entry.note && (
               <p className="text-xs text-muted-foreground/70 italic mt-0.5">{entry.note}</p>
             )}

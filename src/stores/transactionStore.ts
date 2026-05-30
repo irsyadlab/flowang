@@ -101,6 +101,7 @@ export const useTransactionStore = create<TransactionState & TransactionActions>
         toWalletId: data.toWalletId,
         categoryId: data.categoryId,
         date: data.date,
+        time: data.time,
         note: data.note,
         createdAt: now,
         updatedAt: now,

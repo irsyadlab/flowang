@@ -272,7 +272,7 @@ export function DatePickerSheet({
   );
 
   const triggerEl = trigger ? (
-    <div onClick={() => setOpen(true)} className="cursor-pointer">
+    <div onClick={() => setOpen(true)} className="cursor-pointer flex-1 min-w-0">
       {trigger}
     </div>
   ) : (

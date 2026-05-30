@@ -116,7 +116,7 @@ export default function TransactionItem({ transaction }: TransactionItemProps) {
         </div>
         <div className="flex items-center gap-2 mt-0.5">
           <p className="text-xs text-muted-foreground truncate">
-            {walletLabel} · {formatDate(transaction.date)}
+            {walletLabel} · {formatDate(transaction.date, transaction.time)}
           </p>
         </div>
         {transaction.note && (

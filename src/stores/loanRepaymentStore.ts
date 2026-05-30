@@ -75,6 +75,7 @@ export const useLoanRepaymentStore = create<LoanRepaymentState & LoanRepaymentAc
           loanEntryId: data.loanEntryId,
           amount: data.amount,
           date: data.date,
+          time: data.time,
           note: data.note,
           categoryId: data.categoryId,
           linkedTransactionId: undefined,
@@ -88,6 +89,7 @@ export const useLoanRepaymentStore = create<LoanRepaymentState & LoanRepaymentAc
             walletId: data.walletId,
             categoryId: data.categoryId,
             date: data.date,
+            time: data.time,
             amount: data.amount,
             note: data.note,
           };

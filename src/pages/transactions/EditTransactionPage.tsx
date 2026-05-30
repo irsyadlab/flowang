@@ -40,6 +40,7 @@ export default function EditTransactionPage() {
       toWalletId: data.toWalletId || undefined,
       categoryId: data.categoryId || undefined,
       date: data.date,
+      time: data.time || undefined,
       note: data.note || undefined,
     });
     navigate("/transactions");
@@ -85,6 +86,7 @@ export default function EditTransactionPage() {
           toWalletId: transaction.toWalletId ?? "",
           categoryId: transaction.categoryId ?? "",
           date: transaction.date,
+          time: transaction.time ?? "",
           note: transaction.note ?? "",
         }}
         onSubmit={handleSubmit}

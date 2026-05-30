@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { localDateStr } from '@/lib/utils';
+import { localDateStr, localTimeStr } from '@/lib/utils';
 import type { LoanEntry, RepaymentFormData } from '@/types';
 import {
   Form,
@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button';
 import { DatePickerSheet, formatDateShortID } from '@/components/ui/date-picker-sheet';
 import { useWalletStore } from '@/stores/walletStore';
 import { useCategoryStore } from '@/stores/categoryStore';
+import TimePicker from '@/components/ui/time-picker';
 
 /** Format number to IDR display string */
 function formatAmount(value: number): string {
@@ -47,6 +48,7 @@ export default function RepaymentForm({ loanEntry, onSubmit, onCancel }: Repayme
         .number({ invalid_type_error: 'Jumlah harus lebih dari 0' })
         .gt(0, 'Jumlah harus lebih dari 0'),
       date: z.string().min(1, 'Tanggal wajib diisi'),
+      time: z.string().optional(),
       note: z.string().optional(),
       categoryId: z.string().optional(),
       createTransaction: z.boolean(),
@@ -87,6 +89,7 @@ export default function RepaymentForm({ loanEntry, onSubmit, onCancel }: Repayme
     defaultValues: {
       amount: 0,
       date: today,
+      time: localTimeStr(),
       note: '',
       categoryId: '',
       createTransaction: false,
@@ -96,6 +99,7 @@ export default function RepaymentForm({ loanEntry, onSubmit, onCancel }: Repayme
 
   const watchAmount = useWatch({ control: form.control, name: 'amount' });
   const watchCreateTransaction = useWatch({ control: form.control, name: 'createTransaction' });
+  const watchTime = useWatch({ control: form.control, name: 'time' });
 
   const [displayAmount, setDisplayAmount] = useState('');
 
@@ -104,6 +108,7 @@ export default function RepaymentForm({ loanEntry, onSubmit, onCancel }: Repayme
       loanEntryId: loanEntry.id,
       amount: data.amount,
       date: data.date,
+      time: data.time || undefined,
       note: data.note || undefined,
       categoryId: data.categoryId || undefined,
       createTransaction: data.createTransaction,
@@ -178,7 +183,7 @@ export default function RepaymentForm({ loanEntry, onSubmit, onCancel }: Repayme
           {/* Detail fields — grouped card */}
           <div className="rounded-2xl border border-border bg-card divide-y divide-border overflow-hidden">
 
-            {/* Date (Requirements 1.2) */}
+            {/* Date + Time */}
             <FormField
               control={form.control}
               name="date"
@@ -194,6 +199,10 @@ export default function RepaymentForm({ loanEntry, onSubmit, onCancel }: Repayme
                           {formatDateShortID(field.value || today)}
                         </span>
                       }
+                    />
+                    <TimePicker
+                      value={watchTime || ''}
+                      onChange={(v) => form.setValue('time', v)}
                     />
                   </div>
                   <FormMessage className="px-4 pb-2 text-xs" />

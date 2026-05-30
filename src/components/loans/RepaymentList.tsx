@@ -32,7 +32,7 @@ function RepaymentItem({ repayment, loanEntry, categoryName, onDelete }: Repayme
             </p>
 
             {/* Date */}
-            <p className="text-xs text-muted-foreground mt-0.5">{formatDate(repayment.date)}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{formatDate(repayment.date, repayment.time)}</p>
 
             {/* Category */}
             <p className="text-xs text-muted-foreground/70 mt-0.5">{categoryName}</p>

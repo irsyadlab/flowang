@@ -1,20 +1,60 @@
 import type { TooltipRenderProps } from 'react-joyride';
-import type { TourStepMeta } from '@/lib/tourSteps';
+import { TOUR_STEPS, type TourStepMeta } from '@/lib/tourSteps';
+
+/** Build per-page dot data for the current step */
+function usePageDots(currentIndex: number) {
+  const currentPage = (TOUR_STEPS[currentIndex] as TourStepMeta).page;
+
+  // All step indices that belong to the same page
+  const pageIndices = TOUR_STEPS.reduce<number[]>((acc, step, i) => {
+    if ((step as TourStepMeta).page === currentPage) acc.push(i);
+    return acc;
+  }, []);
+
+  const positionInPage = pageIndices.indexOf(currentIndex);
+
+  return { pageIndices, positionInPage, pageSize: pageIndices.length };
+}
+
+function PageDots({
+  positionInPage,
+  pageSize,
+}: {
+  positionInPage: number;
+  pageSize: number;
+}) {
+  return (
+    <div className="flex items-center gap-1.5">
+      {Array.from({ length: pageSize }).map((_, i) => (
+        <span
+          key={i}
+          className={`rounded-full transition-all duration-300 ${
+            i === positionInPage
+              ? 'w-4 h-1.5 bg-primary'
+              : i < positionInPage
+              ? 'w-1.5 h-1.5 bg-primary/40'
+              : 'w-1.5 h-1.5 bg-muted-foreground/25'
+          }`}
+        />
+      ))}
+    </div>
+  );
+}
 
 export function TourTooltip({
   step,
   index,
-  size,
   isLastStep,
   backProps,
   primaryProps,
   skipProps,
   tooltipProps,
 }: TooltipRenderProps) {
-  const stepNumber = index + 1;
   const meta = step as TourStepMeta;
   const isFirst = index === 0;
-  const announcementText = `Langkah ${stepNumber} dari ${size}: ${step.title}`;
+  const announcementText = `${step.title}`;
+
+  const { positionInPage, pageSize } = usePageDots(index);
 
   if (isFirst) {
     return (
@@ -67,18 +107,9 @@ export function TourTooltip({
             </p>
           )}
 
-          {/* Progress dots */}
-          <div className="flex items-center gap-1.5 mt-5">
-            {Array.from({ length: size }).map((_, i) => (
-              <span
-                key={i}
-                className={`rounded-full transition-all duration-300 ${
-                  i === index
-                    ? 'w-4 h-1.5 bg-primary'
-                    : 'w-1.5 h-1.5 bg-muted-foreground/25'
-                }`}
-              />
-            ))}
+          {/* Page dots */}
+          <div className="mt-5">
+            <PageDots positionInPage={positionInPage} pageSize={pageSize} />
           </div>
 
           {/* CTA button */}
@@ -108,23 +139,9 @@ export function TourTooltip({
       </span>
 
       <div className="p-4">
-        {/* Header: progress dots + skip */}
+        {/* Header: page dots + skip */}
         <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-1.5">
-            {Array.from({ length: size }).map((_, i) => (
-              <span
-                key={i}
-                className={`rounded-full transition-all duration-300 ${
-                  i === index
-                    ? 'w-4 h-1.5 bg-primary'
-                    : i < index
-                    ? 'w-1.5 h-1.5 bg-primary/40'
-                    : 'w-1.5 h-1.5 bg-muted-foreground/25'
-                }`}
-              />
-            ))}
-          </div>
-
+          <PageDots positionInPage={positionInPage} pageSize={pageSize} />
           <button
             {...skipProps}
             className="text-xs text-muted-foreground hover:text-foreground transition-colors min-h-[36px] px-2 flex items-center justify-center rounded-lg hover:bg-muted/50"
@@ -177,9 +194,9 @@ export function TourTooltip({
           </ul>
         )}
 
-        {/* Step counter */}
-        <p className="text-[11px] text-muted-foreground/50 mt-3 pl-9">
-          {stepNumber} / {size}
+        {/* Page label */}
+        <p className="text-[11px] text-muted-foreground/50 mt-3 pl-9 capitalize">
+          {meta.page} · {positionInPage + 1}/{pageSize}
         </p>
 
         {/* Navigation */}

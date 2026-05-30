@@ -25,7 +25,12 @@ export default function BottomNav() {
             key={to}
             to={to}
             end={end}
-            data-tour={to === "/transactions" ? "nav-transactions" : to === "/reports" ? "nav-reports" : undefined}
+            data-tour={
+              to === "/transactions" ? "nav-transactions"
+              : to === "/reports" ? "nav-reports"
+              : to === "/loans" ? "nav-loans"
+              : undefined
+            }
             className={({ isActive }) =>
               `relative flex min-h-[52px] min-w-[52px] flex-col items-center justify-center gap-0.5 px-2 py-2 text-[10px] font-medium tracking-wide transition-all duration-200 ${
                 isActive

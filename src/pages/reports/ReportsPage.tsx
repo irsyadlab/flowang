@@ -59,13 +59,13 @@ export default function ReportsPage() {
       <h1 className="text-xl font-bold text-foreground pt-1">Laporan</h1>
       <Tabs defaultValue="realtime">
         <TabsList className="w-full rounded-2xl bg-muted p-1 h-auto">
-          <TabsTrigger value="realtime" className="flex-1 rounded-xl text-xs font-medium py-2 data-[state=active]:bg-card data-[state=active]:shadow-sm">
+          <TabsTrigger value="realtime" data-tour="report-tab-realtime" className="flex-1 rounded-xl text-xs font-medium py-2 data-[state=active]:bg-card data-[state=active]:shadow-sm">
             Realtime
           </TabsTrigger>
-          <TabsTrigger value="monthly" className="flex-1 rounded-xl text-xs font-medium py-2 data-[state=active]:bg-card data-[state=active]:shadow-sm">
+          <TabsTrigger value="monthly" data-tour="report-tab-monthly" className="flex-1 rounded-xl text-xs font-medium py-2 data-[state=active]:bg-card data-[state=active]:shadow-sm">
             Bulanan
           </TabsTrigger>
-          <TabsTrigger value="custom" className="flex-1 rounded-xl text-xs font-medium py-2 data-[state=active]:bg-card data-[state=active]:shadow-sm">
+          <TabsTrigger value="custom" data-tour="report-tab-custom" className="flex-1 rounded-xl text-xs font-medium py-2 data-[state=active]:bg-card data-[state=active]:shadow-sm">
             Custom
           </TabsTrigger>
         </TabsList>

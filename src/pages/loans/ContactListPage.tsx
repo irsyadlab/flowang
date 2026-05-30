@@ -58,6 +58,7 @@ export default function ContactListPage() {
         <div className="flex justify-end">
           <button
             type="button"
+            data-tour="loans-fab"
             onClick={() => navigate('/loans/new')}
             className="pointer-events-auto flex items-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-lg transition-all hover:bg-primary/90 active:scale-95"
             aria-label="Tambah catatan hutang"

@@ -43,7 +43,7 @@ export default function TransactionFilter() {
       <div className="flex items-center justify-between gap-2">
 
         {/* Date navigator */}
-        <div className="flex items-center gap-1">
+        <div data-tour="tx-date-nav" className="flex items-center gap-1">
           <button
             type="button"
             onClick={() => applyDate(shiftDay(activeDate, -1))}
@@ -71,6 +71,7 @@ export default function TransactionFilter() {
 
         {/* Filter toggle button */}
         <button
+          data-tour="tx-filter-btn"
           type="button"
           onClick={() => setFilterOpen((o) => !o)}
           className={`relative flex h-8 items-center gap-1.5 rounded-xl border px-3 text-xs font-medium transition-colors ${

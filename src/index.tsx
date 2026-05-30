@@ -19,6 +19,7 @@ function serveStatic(filePath: string): Response | null {
   const mimeTypes: Record<string, string> = {
     ".json": "application/json",
     ".js":   "application/javascript",
+    ".txt":  "text/plain",
     ".png":  "image/png",
     ".svg":  "image/svg+xml",
     ".ico":  "image/x-icon",
@@ -35,6 +36,7 @@ const server = serve({
   routes: {
     "/sw.js":          () => serveStatic("sw.js") ?? new Response("Not found", { status: 404 }),
     "/manifest.json":  () => serveStatic("manifest.json") ?? new Response("Not found", { status: 404 }),
+    "/robots.txt":     () => serveStatic("robots.txt") ?? new Response("Not found", { status: 404 }),
     "/icons/:file":    (req) => {
       const file = req.params.file;
       return serveStatic(`icons/${file}`) ?? new Response("Not found", { status: 404 });

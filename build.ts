@@ -138,6 +138,7 @@ const start = performance.now();
 const staticFiles = [
   { src: path.join("src", "sw.js"), dest: path.join(outdir, "sw.js") },
   { src: path.join("src", "manifest.json"), dest: path.join(outdir, "manifest.json") },
+  { src: path.join("src", "robots.txt"), dest: path.join(outdir, "robots.txt") },
 ];
 
 const iconsDir = path.join("src", "icons");

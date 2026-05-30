@@ -34,6 +34,7 @@ export default function Dashboard() {
         </div>
         <button
           type="button"
+          data-tour="add-transaction-btn"
           onClick={() => navigate("/transactions/new")}
           className="flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-xs font-semibold text-primary-foreground shadow-sm transition-all hover:bg-primary/90 active:scale-95"
         >
@@ -42,7 +43,9 @@ export default function Dashboard() {
         </button>
       </div>
 
-      <SummaryCard isHidden={isHidden} onHiddenChange={setIsHidden} />
+      <div data-tour="dashboard-summary">
+        <SummaryCard isHidden={isHidden} onHiddenChange={setIsHidden} />
+      </div>
       <WalletList isHidden={isHidden} />
       <RecentTransactions />
     </div>

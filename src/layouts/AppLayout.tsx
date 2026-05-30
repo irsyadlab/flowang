@@ -3,6 +3,7 @@ import { useUIStore } from "@/stores/uiStore";
 import BottomNav from "@/components/layout/BottomNav";
 import ErrorMessage from "@/components/shared/ErrorMessage";
 import LoadingSpinner from "@/components/shared/LoadingSpinner";
+import TourController from "@/components/tour/TourController";
 
 export default function AppLayout() {
   const dbReady = useUIStore((state) => state.dbReady);
@@ -31,7 +32,8 @@ export default function AppLayout() {
 
   return (
     <div className="mx-auto flex min-h-screen max-w-[480px] flex-col bg-background">
-      <main className="flex-1 overflow-y-auto pb-24">
+      <TourController />
+      <main className="flex-1 pb-24">
         <Outlet />
       </main>
       <BottomNav />

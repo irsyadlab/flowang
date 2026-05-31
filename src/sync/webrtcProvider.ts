@@ -22,6 +22,8 @@ let currentRoomName: string | null = null;
 let currentEncryptionKey: string | null = null;
 // Track whether we're in a scheduled reconnect (vs fresh connect)
 let isReconnecting = false;
+// Session ID to ignore stale events from destroyed providers
+let sessionId = 0;
 
 export function getYDoc(): Y.Doc | null {
   return ydoc;
@@ -48,6 +50,10 @@ export function connect(roomName: string, encryptionKey: string): void {
 
   _destroyProviders();
 
+  // Bump session ID so any lingering event listeners from the old provider
+  // can detect they belong to a stale session and ignore their callbacks.
+  const mySession = ++sessionId;
+
   currentRoomName = roomName;
   currentEncryptionKey = encryptionKey;
 
@@ -71,6 +77,9 @@ export function connect(roomName: string, encryptionKey: string): void {
   });
 
   webrtcProvider.on('status', ({ connected }: { connected: boolean }) => {
+    // Ignore events from a previous session's provider
+    if (mySession !== sessionId) return;
+
     if (connected) {
       useSyncStore.getState().setSyncStatus('connected');
       reconnectAttempt = 0;
@@ -83,6 +92,7 @@ export function connect(roomName: string, encryptionKey: string): void {
 
   // Listen for new peers joining and broadcast all local data to them
   webrtcProvider.on('peers', ({ added }: { added: string[] }) => {
+    if (mySession !== sessionId) return;
     if (added.length > 0) {
       // New peer joined — broadcast all current data
       broadcastAllLocalData();
@@ -91,14 +101,15 @@ export function connect(roomName: string, encryptionKey: string): void {
 
   useSyncStore.getState().setSyncStatus('connecting');
 
-  // Listen for browser online event
+  // Listen for browser online event — always reconnect fresh when network returns
   if (onlineHandler) {
     window.removeEventListener('online', onlineHandler);
   }
   onlineHandler = () => {
+    // Reset counter so we always get a full set of retry attempts after reconnect
+    isReconnecting = false;
+    reconnectAttempt = 0;
     if (useSyncStore.getState().syncStatus !== 'connected') {
-      isReconnecting = false;
-      reconnectAttempt = 0;
       scheduleReconnect();
     }
   };

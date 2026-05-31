@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Wallet, Tag, Settings, ShieldCheck, Info, ChevronRight, HelpCircle, RefreshCw } from "lucide-react";
+import { Wallet, Tag, Settings, ShieldCheck, Info, ChevronRight, HelpCircle, RefreshCw, MessageSquare } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useSyncStore } from "@/sync/syncStore";
 import { useTourStore } from "@/stores/tourStore";
@@ -75,6 +75,20 @@ export default function MorePage() {
           <span className="flex-1 min-w-0">
             <span className="text-sm font-medium block">Bantuan</span>
             <span className="text-xs text-muted-foreground">Panduan lengkap penggunaan aplikasi</span>
+          </span>
+          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+        </button>
+
+        <button
+          onClick={() => navigate("/feedback")}
+          className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-muted/50 active:bg-muted"
+        >
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+            <MessageSquare className="h-4 w-4 text-primary" />
+          </div>
+          <span className="flex-1 min-w-0">
+            <span className="text-sm font-medium block">Kirim Feedback</span>
+            <span className="text-xs text-muted-foreground">Saran, laporan bug, atau masukan</span>
           </span>
           <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
         </button>

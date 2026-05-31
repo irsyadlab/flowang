@@ -21,6 +21,7 @@ import EditLoanPage from "@/pages/loans/EditLoanPage";
 import HelpPage from "@/pages/more/HelpPage";
 import PrivacyPolicyPage from "@/pages/privacy-policy/PrivacyPolicyPage";
 import AboutPage from "@/pages/more/AboutPage";
+import FeedbackPage from "@/pages/more/FeedbackPage";
 import { createBrowserRouter } from "react-router-dom";
 
 export const router = createBrowserRouter([
@@ -51,6 +52,7 @@ export const router = createBrowserRouter([
       { path: "privacy-policy", element: <PrivacyPolicyPage /> },
       { path: "help", element: <HelpPage /> },
       { path: "about", element: <AboutPage /> },
+      { path: "feedback", element: <FeedbackPage /> },
     ],
   },
 ]);

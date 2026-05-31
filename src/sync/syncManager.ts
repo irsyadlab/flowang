@@ -144,7 +144,9 @@ function _attachObservers(): void {
     }
 
     // Recalculate balance for every affected wallet from the full transaction
-    // history — this is the only correct way since balance is a derived value.
+    // history. This is safe because initialBalance is never mutated after wallet
+    // creation — balance corrections only create adjustment transactions, so
+    // balance = initialBalance + sum(all_txs) is always consistent.
     if (affectedWalletIds.size > 0) {
       const { getAllTransactions } = await import('../db/transactionDb');
       const allTxs = await getAllTransactions(db);

@@ -35,6 +35,7 @@ import { usePeerDevices } from '@/hooks/usePeerDevices';
 import PeerDevicesDialog from '@/components/settings/PeerDevicesDialog';
 import { getDB } from '@/db/db';
 import { disconnect } from '@/sync/webrtcProvider';
+import { seedDefaultCategories } from '@/db/categoryDb';
 import { useWalletStore } from '@/stores/walletStore';
 import { useTransactionStore } from '@/stores/transactionStore';
 import { useCategoryStore } from '@/stores/categoryStore';
@@ -133,6 +134,10 @@ export default function SettingsPage() {
       useLoanEntryStore.setState({ entries: [] });
       useLoanContactStore.setState({ contacts: [] });
       useLoanRepaymentStore.setState({ repayments: [] });
+
+      // Re-seed kategori default
+      await seedDefaultCategories(db);
+      await useCategoryStore.getState().loadCategories();
 
       sessionStorage.clear();
       setClearDialogOpen(false);

@@ -88,14 +88,16 @@ export const useWalletStore = create<WalletState & WalletActions>((set, get) => 
       const balanceChanged = data.initialBalance !== undefined && data.initialBalance !== existing.initialBalance;
       
       if (balanceChanged) {
-        const oldBalance = existing.initialBalance;
-        const newBalance = data.initialBalance!;
-        const delta = newBalance - oldBalance;
         const now = new Date();
         const today = localDateStr(now);
         const nowISO = localISOString(now);
         const currentTime = localTimeStr(now);
-        
+
+        // delta = selisih antara balance yang diinginkan user dengan balance saat ini.
+        // EditWalletPage mengkonversi: newInitialBalance = oldInitialBalance + (desiredBalance - currentBalance)
+        // sehingga: delta = newInitialBalance - oldInitialBalance = desiredBalance - currentBalance
+        const delta = data.initialBalance! - existing.initialBalance;
+
         const correctionTx: Transaction = {
           id: crypto.randomUUID(),
           type: delta > 0 ? 'adjustment_increase' : 'adjustment_decrease',
@@ -108,10 +110,15 @@ export const useWalletStore = create<WalletState & WalletActions>((set, get) => 
           createdAt: nowISO,
           updatedAt: nowISO,
         };
-        
+
+        // PENTING: initialBalance TIDAK diubah — tetap sama dengan nilai awal wallet.
+        // Balance baru = balance lama + delta (setara dengan desiredBalance yang diinput user).
+        // Dengan ini, recalculation balance dari initialBalance + sum(all_txs) tetap konsisten
+        // karena adjustment tx sudah ter-include dalam sum(all_txs).
         const updatedWallet: Wallet = {
           ...existing,
-          ...data,
+          name: data.name ?? existing.name,
+          // initialBalance sengaja tidak diubah
           balance: existing.balance + delta,
           updatedAt: nowISO,
         };
@@ -133,6 +140,7 @@ export const useWalletStore = create<WalletState & WalletActions>((set, get) => 
 
         if (useSyncStore.getState().syncKey) {
           onLocalChange('wallets', updatedWallet);
+          onLocalChange('transactions', correctionTx);
         }
       } else {
         const updated: Wallet = {

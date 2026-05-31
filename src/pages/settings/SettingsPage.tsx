@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Monitor,
   ArrowLeft,
+  Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSync } from '@/hooks/useSync';
@@ -27,9 +28,10 @@ import SyncKeyCard from '@/components/settings/SyncKeyCard';
 import GoogleDriveCard from '@/components/settings/GoogleDriveCard';
 import ThemeCard from '@/components/settings/ThemeCard';
 import OfflineBanner from '@/components/settings/OfflineBanner';
-import AboutCard from '@/components/settings/AboutCard';
+import ConfirmDialog from '@/components/shared/ConfirmDialog';
 import { generateSyncKey, encodeSyncKey } from '@/sync/syncKeyUtils';
 import { usePeerCount } from '@/hooks/usePeerCount';
+import { getDB } from '@/db/db';
 
 type SheetId = 'sync-key' | 'google-drive' | 'theme' | null;
 
@@ -47,6 +49,8 @@ export default function SettingsPage() {
   const peerCount = usePeerCount();
   const [openSheet, setOpenSheet] = useState<SheetId>(null);
   const [connecting, setConnecting] = useState(false);
+  const [clearDialogOpen, setClearDialogOpen] = useState(false);
+  const [clearing, setClearing] = useState(false);
 
   // Validate env config on mount
   let envError: string[] | null = null;
@@ -79,6 +83,30 @@ export default function SettingsPage() {
       connect();
     } finally {
       setTimeout(() => setConnecting(false), 1500);
+    }
+  };
+
+  const handleClearAllData = async () => {
+    setClearing(true);
+    try {
+      const db = getDB();
+      if (!db) throw new Error('Database not initialized');
+
+      const stores = ['transactions', 'wallets', 'categories', 'loan_contacts', 'loan_entries', 'loan_repayments'];
+      await new Promise<void>((resolve, reject) => {
+        const tx = db.transaction(stores, 'readwrite');
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+        stores.forEach((store) => tx.objectStore(store).clear());
+      });
+
+      sessionStorage.clear();
+      setClearDialogOpen(false);
+      toast.success('Semua data berhasil dihapus');
+    } catch {
+      toast.error('Gagal menghapus data');
+    } finally {
+      setClearing(false);
     }
   };
 
@@ -241,7 +269,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Appearance section */}
-      <div className="space-y-1 mb-24">
+      <div className="space-y-1">
         <p className="px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
           Tampilan
         </p>
@@ -263,8 +291,28 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* About */}
-      <AboutCard />
+      {/* Danger zone */}
+      <div className="space-y-1">
+        <p className="px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          Zona Bahaya
+        </p>
+        <div className="overflow-hidden rounded-xl border border-destructive/30 bg-card">
+          <button
+            type="button"
+            onClick={() => setClearDialogOpen(true)}
+            className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-destructive/5 active:bg-destructive/10"
+          >
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-destructive/10">
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-destructive">Hapus Semua Data</p>
+              <p className="text-xs text-muted-foreground">Transaksi, wallet, kategori, dan pinjaman</p>
+            </div>
+            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+          </button>
+        </div>
+      </div>
 
       {/* ── Responsive Sheets ── */}
 
@@ -301,6 +349,17 @@ export default function SettingsPage() {
       >
         <ThemeCard />
       </ResponsiveSheet>
+
+      <ConfirmDialog
+        open={clearDialogOpen}
+        onOpenChange={setClearDialogOpen}
+        title="Hapus Semua Data?"
+        description="Tindakan ini akan menghapus seluruh transaksi, wallet, kategori, dan data pinjaman secara permanen. Data tidak dapat dipulihkan."
+        confirmLabel={clearing ? 'Menghapus...' : 'Hapus Semua'}
+        confirmDisabled={clearing}
+        onConfirm={handleClearAllData}
+        destructive
+      />
     </div>
   );
 }

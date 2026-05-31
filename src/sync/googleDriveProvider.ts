@@ -163,6 +163,7 @@ function getAccessToken(): string | null {
 interface DriveFile {
   id: string;
   name: string;
+  modifiedTime?: string;
 }
 
 interface DriveFilesResponse {
@@ -184,7 +185,7 @@ interface GoogleUserInfoResponse {
 
 async function listAppDataFiles(token: string): Promise<DriveFile[]> {
   const res = await fetch(
-    `${DRIVE_API_BASE}/files?spaces=appDataFolder&fields=files(id,name)`,
+    `${DRIVE_API_BASE}/files?spaces=appDataFolder&fields=files(id,name,modifiedTime)`,
     { headers: { Authorization: `Bearer ${token}` } }
   );
   if (!res.ok) throw new Error('Gagal mengakses Google Drive');
@@ -443,11 +444,22 @@ export async function checkRestore(): Promise<boolean> {
   }
 }
 
-/** Check if a backup file exists in Drive, regardless of local data state. */
+/** Check if a backup file exists in Drive, regardless of local data state.
+ *  Also syncs the backup timestamp from Drive metadata so all devices show
+ *  the same "last backup" time regardless of which device performed the backup.
+ */
 export async function checkBackupExists(): Promise<boolean> {
   try {
     const files = await listAppDataFilesBackground();
-    return files.some((f) => f.name === BACKUP_FILENAME);
+    const backup = files.find((f) => f.name === BACKUP_FILENAME);
+    if (!backup) return false;
+
+    // Sync Drive's modifiedTime to local state so all devices show the same timestamp
+    if (backup.modifiedTime) {
+      useSyncStore.getState().setLastBackupTimestamp(backup.modifiedTime);
+    }
+
+    return true;
   } catch {
     return false;
   }

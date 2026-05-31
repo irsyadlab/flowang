@@ -182,14 +182,19 @@ export default function GoogleDriveCard() {
     }
   }, [syncError, setSyncError]);
 
+  // Check backup status whenever we have a valid token.
+  // If the token is expired but userInfo exists, silently refresh first.
   useEffect(() => {
-    if (!googleAuthToken) {
-      return;
-    }
+    if (!googleUserInfo) return;
+
     let cancelled = false;
     const check = async () => {
       setCheckingBackup(true);
       try {
+        // Ensure we have a fresh token before checking (silent refresh if needed)
+        if (!googleAuthToken) {
+          await googleDriveProvider.silentRefresh();
+        }
         const [autoRestore, exists] = await Promise.all([
           googleDriveProvider.checkRestore(),
           googleDriveProvider.checkBackupExists(),
@@ -197,15 +202,18 @@ export default function GoogleDriveCard() {
         if (cancelled) return;
         if (autoRestore) setShowAutoRestore(true);
         setBackupExists(exists);
+      } catch {
+        // Token refresh failed or network error — skip silently
       } finally {
         if (!cancelled) setCheckingBackup(false);
       }
     };
     check();
     return () => { cancelled = true; };
-  }, [googleAuthToken]);
+  }, [googleUserInfo, googleAuthToken]);
 
-  if (!googleAuthToken) {
+  // Not connected to Google at all
+  if (!googleUserInfo) {
     return (
       <Button
         variant="outline"

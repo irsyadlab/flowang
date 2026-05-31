@@ -119,9 +119,9 @@ function getOrCreateTokenClient(): GisTokenClient {
  * Returns a valid access token, refreshing silently if expired or near expiry.
  * If a user interaction is needed (first login), opens the consent popup.
  *
- * @param allowPopup - When false (default), throws instead of opening a popup
- *   if the token is missing or expired. Pass true only from explicit user
- *   actions (login, backup, restore) so the popup never fires automatically.
+ * @param allowPopup - When false (default), throws TOKEN_EXPIRED without touching
+ *   stored credentials. Pass true only from explicit user actions (login, backup,
+ *   restore) so the popup never fires automatically.
  */
 async function ensureValidToken(allowPopup = false): Promise<string> {
   const state = useSyncStore.getState();
@@ -134,8 +134,9 @@ async function ensureValidToken(allowPopup = false): Promise<string> {
 
   // Token missing or expired — only open popup when explicitly allowed
   if (!allowPopup) {
-    // Clear stale token so the UI reflects the logged-out state
-    useSyncStore.getState().setGoogleAuth(null, null);
+    // Do NOT clear stored credentials — user info is still valid, only the
+    // access token needs refreshing. The UI will trigger a silent refresh
+    // when the sheet is opened.
     throw new Error('TOKEN_EXPIRED');
   }
 
@@ -289,6 +290,29 @@ async function deserializeToIndexedDB(data: Uint8Array): Promise<void> {
       tx.onerror = () => reject(tx.error);
     });
   }
+}
+
+/**
+ * Silently refresh the access token using the existing Google session.
+ * Does not open a popup — throws if the session is no longer valid.
+ */
+export async function silentRefresh(): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    tokenRefreshResolve = (token) => {
+      void token;
+      resolve();
+    };
+    tokenRefreshReject = reject;
+
+    try {
+      const client = getOrCreateTokenClient();
+      client.requestAccessToken({ prompt: '' });
+    } catch (err) {
+      tokenRefreshResolve = null;
+      tokenRefreshReject = null;
+      reject(err);
+    }
+  });
 }
 
 export async function login(): Promise<void> {

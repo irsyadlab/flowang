@@ -147,15 +147,11 @@ export default function SettingsPage() {
     if (syncStatus === 'connected') {
       if (peerCount > 0) {
         return (
-          <button
-            type="button"
-            onClick={() => setPeerDevicesDialogOpen(true)}
-            className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400 hover:underline"
-          >
+          <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
             <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
             <Monitor className="h-3 w-3" />
             {peerCount} perangkat terhubung
-          </button>
+          </span>
         );
       }
       return (
@@ -215,7 +211,11 @@ export default function SettingsPage() {
         <div className="overflow-hidden rounded-xl border border-border bg-card divide-y divide-border">
 
           {/* Sync status row */}
-          <div data-tour="settings-sync-status" className="flex items-center gap-3 px-4 py-3.5">
+          <div
+            data-tour="settings-sync-status"
+            className={`flex items-center gap-3 px-4 py-3.5 ${peerCount > 0 ? 'cursor-pointer hover:bg-muted/50 active:bg-muted transition-colors' : ''}`}
+            onClick={() => peerCount > 0 && setPeerDevicesDialogOpen(true)}
+          >
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
               {syncStatus === 'disconnected'
                 ? <WifiOff className="h-4 w-4 text-primary" />
@@ -231,7 +231,7 @@ export default function SettingsPage() {
                 size="sm"
                 variant="outline"
                 className="shrink-0 h-7 text-xs"
-                onClick={handleConnect}
+                onClick={(e) => { e.stopPropagation(); handleConnect(); }}
                 disabled={connecting}
               >
                 {connecting
@@ -239,6 +239,9 @@ export default function SettingsPage() {
                   : 'Hubungkan'
                 }
               </Button>
+            )}
+            {peerCount > 0 && (
+              <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
             )}
           </div>
 

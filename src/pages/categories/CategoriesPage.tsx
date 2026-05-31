@@ -22,8 +22,8 @@ export default function CategoriesPage() {
   const expenseCategories = categories.filter((c) => c.type === "expense" || c.type === "both");
 
   return (
-    <div className="flex flex-col gap-4 p-4 pb-6">
-      <div className="flex items-center justify-between pt-1">
+    <div>
+      <div className="sticky top-0 z-30 bg-background px-4 flex items-center justify-between py-3">
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -45,6 +45,7 @@ export default function CategoriesPage() {
           Tambah
         </button>
       </div>
+      <div className="flex flex-col gap-4 px-4 pb-6">
 
       {categories.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border bg-card p-6">
@@ -79,6 +80,7 @@ export default function CategoriesPage() {
           )}
         </div>
       )}
+    </div>
     </div>
   );
 }

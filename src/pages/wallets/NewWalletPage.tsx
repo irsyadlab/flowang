@@ -49,9 +49,9 @@ export default function NewWalletPage() {
   });
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-64px)]">
+    <div>
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 pt-5 pb-4">
+      <div className="sticky top-0 z-30 bg-background px-4 flex items-center gap-3 pt-5 pb-4">
         <button
           type="button"
           onClick={() => navigate(-1)}
@@ -62,6 +62,7 @@ export default function NewWalletPage() {
         </button>
         <h1 className="text-xl font-bold text-foreground">Wallet Baru</h1>
       </div>
+      <div className="flex flex-col min-h-[calc(100vh-64px)]">
 
       {/* Live preview card */}
       <div className="px-4 pb-5">
@@ -153,6 +154,7 @@ export default function NewWalletPage() {
             </form>
           </Form>
         </div>
+      </div>
       </div>
     </div>
   );

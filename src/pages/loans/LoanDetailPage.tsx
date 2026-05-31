@@ -42,9 +42,9 @@ export default function LoanDetailPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4 p-4 pb-28">
+    <div>
       {/* Header */}
-      <div className="flex items-center gap-2 pt-1">
+      <div className="sticky top-0 z-30 bg-background px-4 flex items-center gap-2 py-3">
         <button
           type="button"
           onClick={() => navigate('/loans')}
@@ -63,6 +63,7 @@ export default function LoanDetailPage() {
           <Trash2 className="h-4 w-4" />
         </button>
       </div>
+      <div className="flex flex-col gap-4 px-4 pb-28">
 
       <LoanSummaryCard totalLend={totalLend} totalBorrow={totalBorrow} />
 
@@ -170,6 +171,7 @@ export default function LoanDetailPage() {
         }
         onConfirm={handleDeleteContact}
       />
+    </div>
     </div>
   );
 }

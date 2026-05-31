@@ -25,9 +25,9 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="flex flex-col gap-5 p-4 pb-6">
+    <div className="flex flex-col gap-5 pb-6">
       {/* Page header */}
-      <div className="flex items-center justify-between pt-1">
+      <div className="sticky top-0 z-30 bg-background px-4 flex items-center justify-between py-3">
         <div>
           <h1 className="text-xl font-bold text-foreground leading-tight">Flowang</h1>
           <p className="text-xs text-muted-foreground">Catatan keuangan pribadi</p>
@@ -43,11 +43,11 @@ export default function Dashboard() {
         </button>
       </div>
 
-      <div data-tour="dashboard-summary">
+      <div data-tour="dashboard-summary" className="px-4">
         <SummaryCard isHidden={isHidden} onHiddenChange={setIsHidden} />
       </div>
-      <WalletList isHidden={isHidden} />
-      <RecentTransactions />
+      <div className="px-4"><WalletList isHidden={isHidden} /></div>
+      <div className="px-4"><RecentTransactions /></div>
     </div>
   );
 }

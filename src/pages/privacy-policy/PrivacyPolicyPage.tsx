@@ -177,9 +177,9 @@ export default function PrivacyPolicyPage() {
   };
 
   return (
-    <div className="px-4 pt-1 pb-24">
+    <div>
       {/* Header */}
-      <div className="flex items-center gap-3 py-3">
+      <div className="sticky top-0 z-30 bg-background px-4 flex items-center gap-3 py-3">
         <button
           type="button"
           onClick={handleBack}
@@ -193,6 +193,7 @@ export default function PrivacyPolicyPage() {
           <p className="text-xs text-muted-foreground">Terakhir diperbarui: {LAST_UPDATED}</p>
         </div>
       </div>
+      <div className="px-4 pb-24">
 
       {/* Hero banner */}
       <div className="mt-2 mb-6 rounded-xl border bg-primary/5 px-4 py-4 flex items-start gap-3">
@@ -222,6 +223,7 @@ export default function PrivacyPolicyPage() {
           </div>
         ))}
       </main>
+    </div>
     </div>
   );
 }

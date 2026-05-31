@@ -89,8 +89,11 @@ export default function MorePage() {
   ];
 
   return (
-    <div className="px-4 py-6 space-y-6 pb-24">
-      <h1 className="text-lg font-semibold">Lainnya</h1>
+    <div className="pb-24">
+      <div className="sticky top-0 z-30 bg-background px-4 py-3">
+        <h1 className="text-lg font-semibold">Lainnya</h1>
+      </div>
+      <div className="px-4 space-y-6">
 
       {groups.map((group) => (
         <div key={group.label} className="space-y-1.5">
@@ -108,6 +111,7 @@ export default function MorePage() {
           </div>
         </div>
       ))}
+      </div>
     </div>
   );
 }

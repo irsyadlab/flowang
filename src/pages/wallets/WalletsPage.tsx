@@ -21,8 +21,8 @@ export default function WalletsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4 p-4 pb-6">
-      <div className="flex items-center justify-between pt-1">
+    <div>
+      <div className="sticky top-0 z-30 bg-background px-4 flex items-center justify-between py-3">
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -55,6 +55,7 @@ export default function WalletsPage() {
           </button>
         </div>
       </div>
+      <div className="flex flex-col gap-4 px-4 pb-6">
 
       {wallets.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border bg-card p-6">
@@ -72,6 +73,7 @@ export default function WalletsPage() {
           ))}
         </div>
       )}
+    </div>
     </div>
   );
 }

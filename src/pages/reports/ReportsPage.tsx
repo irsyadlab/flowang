@@ -55,8 +55,11 @@ export default function ReportsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4 p-4 pb-6">
-      <h1 className="text-xl font-bold text-foreground pt-1">Laporan</h1>
+    <div className="flex flex-col gap-4 pb-6">
+      <div className="sticky top-0 z-30 bg-background px-4 py-3">
+        <h1 className="text-xl font-bold text-foreground">Laporan</h1>
+      </div>
+      <div className="px-4 flex flex-col gap-4">
       <Tabs defaultValue="realtime">
         <TabsList className="w-full rounded-2xl bg-muted p-1 h-auto">
           <TabsTrigger value="realtime" data-tour="report-tab-realtime" className="flex-1 rounded-xl text-xs font-medium py-2 data-[state=active]:bg-card data-[state=active]:shadow-sm">
@@ -93,7 +96,8 @@ export default function ReportsPage() {
             onNavigateToContact={handleNavigateToContact}
           />
         </TabsContent>
-      </Tabs>
+        </Tabs>
+      </div>
     </div>
   );
 }

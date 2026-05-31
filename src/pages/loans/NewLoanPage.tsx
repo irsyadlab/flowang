@@ -28,9 +28,9 @@ export default function NewLoanPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-64px)]">
+    <div>
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 pt-5 pb-4">
+      <div className="sticky top-0 z-30 bg-background px-4 flex items-center gap-3 pt-5 pb-4">
         <button
           type="button"
           onClick={() => navigate(-1)}
@@ -41,12 +41,14 @@ export default function NewLoanPage() {
         </button>
         <h1 className="text-xl font-bold text-foreground">Entri Hutang Baru</h1>
       </div>
+      <div className="flex flex-col min-h-[calc(100vh-64px)]">
 
       <LoanForm
         mode="create"
         defaultContactId={contactId}
         onSubmit={handleSubmit}
       />
+    </div>
     </div>
   );
 }

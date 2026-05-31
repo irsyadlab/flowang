@@ -17,9 +17,9 @@ export default function AboutPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="px-4 pt-1 pb-24">
+    <div>
       {/* Header */}
-      <div className="flex items-center gap-3 py-3">
+      <div className="sticky top-0 z-30 bg-background px-4 flex items-center gap-3 py-3">
         <button
           type="button"
           onClick={() => navigate(-1)}
@@ -30,6 +30,7 @@ export default function AboutPage() {
         </button>
         <h1 className="text-lg font-semibold text-foreground">Tentang</h1>
       </div>
+      <div className="px-4 pb-24">
 
       {/* Wordmark hero */}
       <div className="flex flex-col items-center gap-1.5 py-8">
@@ -121,6 +122,7 @@ export default function AboutPage() {
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 }

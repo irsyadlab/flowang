@@ -33,9 +33,9 @@ export default function WalletDetailPage() {
   };
 
   return (
-    <div className="flex flex-col gap-4 p-4 pb-6">
+    <div>
       {/* Header */}
-      <div className="flex items-center justify-between pt-1">
+      <div className="sticky top-0 z-30 bg-background px-4 flex items-center justify-between py-3">
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -66,6 +66,7 @@ export default function WalletDetailPage() {
           </button>
         </div>
       </div>
+      <div className="flex flex-col gap-4 px-4 pb-6">
 
       <WalletDetailHeader wallet={wallet} transactions={walletTransactions} />
 
@@ -87,6 +88,7 @@ export default function WalletDetailPage() {
         description="Yakin ingin menghapus wallet ini? Wallet yang memiliki transaksi tidak dapat dihapus."
         onConfirm={handleDelete}
       />
+    </div>
     </div>
   );
 }

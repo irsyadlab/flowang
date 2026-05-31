@@ -48,9 +48,9 @@ export default function FeedbackPage() {
   };
 
   return (
-    <div className="px-4 pt-1 pb-24">
+    <div>
       {/* Header */}
-      <div className="flex items-center gap-3 py-3">
+      <div className="sticky top-0 z-30 bg-background px-4 flex items-center gap-3 py-3">
         <button
           type="button"
           onClick={() => navigate(-1)}
@@ -61,6 +61,7 @@ export default function FeedbackPage() {
         </button>
         <h1 className="text-lg font-semibold text-foreground">Kirim Feedback</h1>
       </div>
+      <div className="px-4 pb-24">
 
       {status === "success" ? (
         <div className="flex flex-col items-center gap-3 py-16 text-center">
@@ -158,6 +159,7 @@ export default function FeedbackPage() {
           </form>
         </>
       )}
+    </div>
     </div>
   );
 }

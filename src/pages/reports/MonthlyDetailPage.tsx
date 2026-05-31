@@ -37,9 +37,9 @@ export default function MonthlyDetailPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4 p-4 pb-6">
+    <div>
       {/* Header */}
-      <div className="flex items-center gap-2 pt-1">
+      <div className="sticky top-0 z-30 bg-background px-4 flex items-center gap-2 py-3">
         <button
           type="button"
           onClick={() => navigate(-1)}
@@ -55,6 +55,7 @@ export default function MonthlyDetailPage() {
           <p className="text-[10px] text-muted-foreground">Laporan Bulanan</p>
         </div>
       </div>
+      <div className="flex flex-col gap-4 px-4 pb-6">
 
       {/* Tabs */}
       <Tabs defaultValue="chart">
@@ -80,6 +81,7 @@ export default function MonthlyDetailPage() {
           <MonthlyReportNote dateFrom={dateFrom} dateTo={dateTo} />
         </TabsContent>
       </Tabs>
+    </div>
     </div>
   );
 }

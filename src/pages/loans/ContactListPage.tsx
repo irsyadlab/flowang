@@ -29,8 +29,8 @@ export default function ContactListPage() {
   );
 
   return (
-    <div className="flex flex-col gap-4 p-4 pb-28">
-      <div className="flex items-center gap-2 pt-1">
+    <div className="flex flex-col gap-4 pb-28">
+      <div className="sticky top-0 z-30 bg-background px-4 py-3 flex items-center gap-2">
         <h1 className="text-xl font-bold text-foreground">Hutang</h1>
         {activeCount > 0 && (
           <Badge variant="secondary" className="text-[10px]">
@@ -38,6 +38,7 @@ export default function ContactListPage() {
           </Badge>
         )}
       </div>
+      <div className="px-4 flex flex-col gap-4">
 
       {contacts.length === 0 ? (
         <EmptyState
@@ -52,6 +53,7 @@ export default function ContactListPage() {
           onContactClick={(contactId) => navigate(`/loans/${contactId}`)}
         />
       )}
+      </div>
 
       {/* FAB */}
       <div className="fixed bottom-[calc(4rem+1.5rem)] left-1/2 z-40 w-full max-w-[480px] -translate-x-1/2 px-4 pointer-events-none">

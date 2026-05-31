@@ -33,12 +33,14 @@ export default function TransactionsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4 p-4 pb-28">
-      <div className="pt-1">
+    <div className="flex flex-col gap-4 pb-28">
+      <div className="sticky top-0 z-30 bg-background px-4 py-3">
         <h1 className="text-xl font-bold text-foreground">Transaksi</h1>
       </div>
-      <TransactionFilter />
-      <TransactionList />
+      <div className="px-4 flex flex-col gap-4">
+        <TransactionFilter />
+        <TransactionList />
+      </div>
 
       {/* FAB — fixed tapi dibatasi lebar container via left/right calc */}
       <div className="fixed bottom-[calc(4rem+1.5rem)] left-1/2 z-40 w-full max-w-[480px] -translate-x-1/2 px-4 pointer-events-none">

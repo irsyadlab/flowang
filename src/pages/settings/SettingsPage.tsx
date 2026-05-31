@@ -181,8 +181,8 @@ export default function SettingsPage() {
     : driveSubtitle;
 
   return (
-    <div className="px-4 py-6 space-y-6">
-      <div className="flex items-center gap-2 mb-6">
+    <div>
+      <div className="sticky top-0 z-30 bg-background px-4 flex items-center gap-2 py-6">
         <button
           type="button"
           onClick={() => navigate(-1)}
@@ -193,6 +193,7 @@ export default function SettingsPage() {
         </button>
         <h1 className="text-lg font-semibold">Pengaturan</h1>
       </div>
+      <div className="px-4 pb-6 space-y-6">
 
       <OfflineBanner />
 
@@ -360,6 +361,7 @@ export default function SettingsPage() {
         onConfirm={handleClearAllData}
         destructive
       />
+    </div>
     </div>
   );
 }

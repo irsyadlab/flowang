@@ -8,6 +8,7 @@ import { IndexeddbPersistence } from 'y-indexeddb';
 import { useSyncStore } from './syncStore';
 import { calculateBackoffDelay, MAX_ATTEMPTS } from './backoffUtils';
 import { getEnvConfig, getIceServers } from '../lib/envConfig';
+import { getLocalDeviceInfo } from '../lib/deviceInfo';
 
 export const YJS_STORE = 'yjs-sync';
 
@@ -75,6 +76,10 @@ export function connect(roomName: string, encryptionKey: string): void {
     password: encryptionKey,
     ...(iceServers.length > 0 && { peerOpts: { config: { iceServers } } }),
   });
+
+  // Broadcast local device info via awareness so peers can display it
+  const deviceInfo = getLocalDeviceInfo();
+  webrtcProvider.awareness.setLocalStateField('device', deviceInfo);
 
   webrtcProvider.on('status', ({ connected }: { connected: boolean }) => {
     // Ignore events from a previous session's provider

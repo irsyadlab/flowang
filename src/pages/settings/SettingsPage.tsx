@@ -31,6 +31,8 @@ import OfflineBanner from '@/components/settings/OfflineBanner';
 import ConfirmDialog from '@/components/shared/ConfirmDialog';
 import { generateSyncKey, encodeSyncKey } from '@/sync/syncKeyUtils';
 import { usePeerCount } from '@/hooks/usePeerCount';
+import { usePeerDevices } from '@/hooks/usePeerDevices';
+import PeerDevicesDialog from '@/components/settings/PeerDevicesDialog';
 import { getDB } from '@/db/db';
 import { useStickyHeader } from '@/hooks/useStickyHeader';
 
@@ -49,10 +51,12 @@ export default function SettingsPage() {
   const { googleAuthToken, googleUserInfo, lastBackupTimestamp } = useSync();
   const navigate = useNavigate();
   const peerCount = usePeerCount();
+  const peerDevices = usePeerDevices();
   const [openSheet, setOpenSheet] = useState<SheetId>(null);
   const [connecting, setConnecting] = useState(false);
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [peerDevicesDialogOpen, setPeerDevicesDialogOpen] = useState(false);
 
   // Validate env config on mount
   let envError: string[] | null = null;
@@ -143,11 +147,15 @@ export default function SettingsPage() {
     if (syncStatus === 'connected') {
       if (peerCount > 0) {
         return (
-          <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+          <button
+            type="button"
+            onClick={() => setPeerDevicesDialogOpen(true)}
+            className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400 hover:underline"
+          >
             <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
             <Monitor className="h-3 w-3" />
             {peerCount} perangkat terhubung
-          </span>
+          </button>
         );
       }
       return (
@@ -362,6 +370,12 @@ export default function SettingsPage() {
         confirmDisabled={clearing}
         onConfirm={handleClearAllData}
         destructive
+      />
+
+      <PeerDevicesDialog
+        open={peerDevicesDialogOpen}
+        onOpenChange={setPeerDevicesDialogOpen}
+        peers={peerDevices}
       />
     </div>
     </div>

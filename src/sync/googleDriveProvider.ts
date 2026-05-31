@@ -118,14 +118,25 @@ function getOrCreateTokenClient(): GisTokenClient {
 /**
  * Returns a valid access token, refreshing silently if expired or near expiry.
  * If a user interaction is needed (first login), opens the consent popup.
+ *
+ * @param allowPopup - When false (default), throws instead of opening a popup
+ *   if the token is missing or expired. Pass true only from explicit user
+ *   actions (login, backup, restore) so the popup never fires automatically.
  */
-async function ensureValidToken(): Promise<string> {
+async function ensureValidToken(allowPopup = false): Promise<string> {
   const state = useSyncStore.getState();
   const { googleAuthToken, googleTokenExpiry } = state;
 
   // Token still valid with buffer
   if (googleAuthToken && googleTokenExpiry && Date.now() < googleTokenExpiry - TOKEN_EXPIRY_BUFFER_MS) {
     return googleAuthToken;
+  }
+
+  // Token missing or expired — only open popup when explicitly allowed
+  if (!allowPopup) {
+    // Clear stale token so the UI reflects the logged-out state
+    useSyncStore.getState().setGoogleAuth(null, null);
+    throw new Error('TOKEN_EXPIRED');
   }
 
   // Need to refresh — request a new token
@@ -171,9 +182,7 @@ interface GoogleUserInfoResponse {
   email?: string;
 }
 
-async function listAppDataFiles(): Promise<DriveFile[]> {
-  const token = await ensureValidToken();
-
+async function listAppDataFiles(token: string): Promise<DriveFile[]> {
   const res = await fetch(
     `${DRIVE_API_BASE}/files?spaces=appDataFolder&fields=files(id,name)`,
     { headers: { Authorization: `Bearer ${token}` } }
@@ -183,8 +192,12 @@ async function listAppDataFiles(): Promise<DriveFile[]> {
   return data.files || [];
 }
 
-async function uploadFile(name: string, data: Uint8Array): Promise<void> {
-  const token = await ensureValidToken();
+async function listAppDataFilesBackground(): Promise<DriveFile[]> {
+  const token = await ensureValidToken(false);
+  return listAppDataFiles(token);
+}
+
+async function uploadFile(name: string, data: Uint8Array, token: string): Promise<void> {
 
   const metadata = {
     name,
@@ -208,8 +221,7 @@ async function uploadFile(name: string, data: Uint8Array): Promise<void> {
   if (!res.ok) throw new Error('Gagal upload ke Google Drive');
 }
 
-async function downloadFile(fileId: string): Promise<Uint8Array> {
-  const token = await ensureValidToken();
+async function downloadFile(fileId: string, token: string): Promise<Uint8Array> {
 
   const res = await fetch(`${DRIVE_API_BASE}/files/${fileId}?alt=media`, {
     headers: { Authorization: `Bearer ${token}` },
@@ -219,9 +231,7 @@ async function downloadFile(fileId: string): Promise<Uint8Array> {
   return new Uint8Array(await res.arrayBuffer());
 }
 
-async function deleteFile(fileId: string): Promise<void> {
-  const token = await ensureValidToken();
-
+async function deleteFile(fileId: string, token: string): Promise<void> {
   await fetch(`${DRIVE_API_BASE}/files/${fileId}`, {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${token}` },
@@ -373,19 +383,20 @@ async function performBackup(): Promise<void> {
 
   for (let attempt = 0; attempt < RETRY_COUNT; attempt++) {
     try {
+      const token = await ensureValidToken(true);
       const jsonBytes = await serializeIndexedDB();
       // Use decodeSyncKey consistently (same as restore)
       const decoded = decodeSyncKey(syncKey);
       const key = await importKeyFromBase64(decoded.encryptionKey);
       const encrypted = await encrypt(jsonBytes, key);
 
-      const files = await listAppDataFiles();
+      const files = await listAppDataFiles(token);
       const existing = files.find((f) => f.name === BACKUP_FILENAME);
       if (existing) {
-        await deleteFile(existing.id);
+        await deleteFile(existing.id, token);
       }
 
-      await uploadFile(BACKUP_FILENAME, encrypted);
+      await uploadFile(BACKUP_FILENAME, encrypted, token);
 
       const now = new Date().toISOString();
       useSyncStore.getState().setLastBackupTimestamp(now);
@@ -407,7 +418,7 @@ async function performBackup(): Promise<void> {
 
 export async function checkRestore(): Promise<boolean> {
   try {
-    const files = await listAppDataFiles();
+    const files = await listAppDataFilesBackground();
     const backup = files.find((f) => f.name === BACKUP_FILENAME);
     if (!backup) return false;
 
@@ -436,7 +447,7 @@ export async function checkRestore(): Promise<boolean> {
 /** Check if a backup file exists in Drive, regardless of local data state. */
 export async function checkBackupExists(): Promise<boolean> {
   try {
-    const files = await listAppDataFiles();
+    const files = await listAppDataFilesBackground();
     return files.some((f) => f.name === BACKUP_FILENAME);
   } catch {
     return false;
@@ -455,11 +466,12 @@ export async function restore(): Promise<void> {
  */
 export async function restoreWithKey(syncKey: string): Promise<void> {
   try {
-    const files = await listAppDataFiles();
+    const token = await ensureValidToken(true);
+    const files = await listAppDataFiles(token);
     const backup = files.find((f) => f.name === BACKUP_FILENAME);
     if (!backup) throw new Error('Backup tidak ditemukan di Google Drive');
 
-    const encrypted = await downloadFile(backup.id);
+    const encrypted = await downloadFile(backup.id, token);
 
     const decoded = decodeSyncKey(syncKey);
     const key = await importKeyFromBase64(decoded.encryptionKey);

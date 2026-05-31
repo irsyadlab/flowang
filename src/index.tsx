@@ -42,7 +42,8 @@ const server = serve({
         'BUN_PUBLIC_GOOGLE_CLIENT_ID',
         'BUN_PUBLIC_GOOGLE_API_KEY',
         'BUN_PUBLIC_STUN_URL',
-        'BUN_PUBLIC_TURN_URL',
+        'BUN_PUBLIC_TURN_URL_1',
+        'BUN_PUBLIC_TURN_URL_2',
         'BUN_PUBLIC_TURN_USERNAME',
         'BUN_PUBLIC_TURN_CREDENTIAL',
       ];

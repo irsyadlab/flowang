@@ -68,19 +68,22 @@ describe('EnvConfig', () => {
   test('getIceServers returns empty array if no STUN/TURN', () => {
     const original = {
       stun: process.env.BUN_PUBLIC_STUN_URL,
-      turnUrl: process.env.BUN_PUBLIC_TURN_URL,
+      turnUrl1: process.env.BUN_PUBLIC_TURN_URL_1,
+      turnUrl2: process.env.BUN_PUBLIC_TURN_URL_2,
       turnUser: process.env.BUN_PUBLIC_TURN_USERNAME,
       turnPass: process.env.BUN_PUBLIC_TURN_CREDENTIAL,
     };
     delete process.env.BUN_PUBLIC_STUN_URL;
-    delete process.env.BUN_PUBLIC_TURN_URL;
+    delete process.env.BUN_PUBLIC_TURN_URL_1;
+    delete process.env.BUN_PUBLIC_TURN_URL_2;
     delete process.env.BUN_PUBLIC_TURN_USERNAME;
     delete process.env.BUN_PUBLIC_TURN_CREDENTIAL;
     try {
       expect(getIceServers()).toEqual([]);
     } finally {
       if (original.stun) process.env.BUN_PUBLIC_STUN_URL = original.stun;
-      if (original.turnUrl) process.env.BUN_PUBLIC_TURN_URL = original.turnUrl;
+      if (original.turnUrl1) process.env.BUN_PUBLIC_TURN_URL_1 = original.turnUrl1;
+      if (original.turnUrl2) process.env.BUN_PUBLIC_TURN_URL_2 = original.turnUrl2;
       if (original.turnUser) process.env.BUN_PUBLIC_TURN_USERNAME = original.turnUser;
       if (original.turnPass) process.env.BUN_PUBLIC_TURN_CREDENTIAL = original.turnPass;
     }
@@ -88,18 +91,22 @@ describe('EnvConfig', () => {
 
   test('partial TURN config is invalid', () => {
     const original = {
-      turnUrl: process.env.BUN_PUBLIC_TURN_URL,
+      turnUrl1: process.env.BUN_PUBLIC_TURN_URL_1,
+      turnUrl2: process.env.BUN_PUBLIC_TURN_URL_2,
       turnUser: process.env.BUN_PUBLIC_TURN_USERNAME,
       turnPass: process.env.BUN_PUBLIC_TURN_CREDENTIAL,
     };
-    process.env.BUN_PUBLIC_TURN_URL = 'turn:test';
+    process.env.BUN_PUBLIC_TURN_URL_1 = 'turn:test';
+    delete process.env.BUN_PUBLIC_TURN_URL_2;
     delete process.env.BUN_PUBLIC_TURN_USERNAME;
     delete process.env.BUN_PUBLIC_TURN_CREDENTIAL;
     try {
       expect(validateTurnConfig().length).toBeGreaterThan(0);
     } finally {
-      if (original.turnUrl) process.env.BUN_PUBLIC_TURN_URL = original.turnUrl;
-      else delete process.env.BUN_PUBLIC_TURN_URL;
+      if (original.turnUrl1) process.env.BUN_PUBLIC_TURN_URL_1 = original.turnUrl1;
+      else delete process.env.BUN_PUBLIC_TURN_URL_1;
+      if (original.turnUrl2) process.env.BUN_PUBLIC_TURN_URL_2 = original.turnUrl2;
+      else delete process.env.BUN_PUBLIC_TURN_URL_2;
       if (original.turnUser) process.env.BUN_PUBLIC_TURN_USERNAME = original.turnUser;
       else delete process.env.BUN_PUBLIC_TURN_USERNAME;
       if (original.turnPass) process.env.BUN_PUBLIC_TURN_CREDENTIAL = original.turnPass;

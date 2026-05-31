@@ -1,9 +1,7 @@
-import { useCallback, useEffect } from "react";
+import { useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useTransactionStore } from "@/stores/transactionStore";
-import { useWalletStore } from "@/stores/walletStore";
-import { useCategoryStore } from "@/stores/categoryStore";
 import { useLoanEntries } from "@/hooks/useLoanEntries";
 import { useLoanRepayments } from "@/hooks/useLoanRepayments";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,25 +10,14 @@ import MonthlyReport from "@/components/reports/MonthlyReport";
 import CustomReport from "@/components/reports/CustomReport";
 import LoanReportSection from "@/components/loans/LoanReportSection";
 import ErrorMessage from "@/components/shared/ErrorMessage";
-import LoadingSpinner from "@/components/shared/LoadingSpinner";
 import { useStickyHeader } from "@/hooks/useStickyHeader";
 
 export default function ReportsPage() {
   const stickyHeader = useStickyHeader();
   const navigate = useNavigate();
-  const { isLoading: txLoading, error: txError, loadTransactions } = useTransactionStore();
-  const { loadWallets } = useWalletStore();
-  const { loadCategories } = useCategoryStore();
-  const { entries, loadEntries } = useLoanEntries();
-  const { repayments, loadRepayments } = useLoanRepayments();
-
-  useEffect(() => {
-    loadTransactions();
-    loadWallets();
-    loadCategories();
-    loadEntries();
-    loadRepayments();
-  }, [loadTransactions, loadWallets, loadCategories, loadEntries, loadRepayments]);
+  const { error: txError } = useTransactionStore();
+  const { entries } = useLoanEntries();
+  const { repayments } = useLoanRepayments();
 
   const handleNavigateToContact = useCallback(
     (contactId: string) => {
@@ -42,10 +29,6 @@ export default function ReportsPage() {
     },
     [navigate]
   );
-
-  if (txLoading) {
-    return <LoadingSpinner fullscreen />;
-  }
 
   if (txError) {
     return (

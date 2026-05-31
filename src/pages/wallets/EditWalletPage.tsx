@@ -7,7 +7,6 @@ import { useWalletStore } from "@/stores/walletStore";
 import { walletEditSchema, type WalletEditInput } from "@/lib/validators";
 import { formatCurrency } from "@/lib/utils";
 import ErrorMessage from "@/components/shared/ErrorMessage";
-import LoadingSpinner from "@/components/shared/LoadingSpinner";
 import {
   Form,
   FormControl,
@@ -32,11 +31,7 @@ export default function EditWalletPage() {
   const stickyHeader = useStickyHeader();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { wallets, isLoading, loadWallets, updateWallet } = useWalletStore();
-
-  useEffect(() => {
-    if (wallets.length === 0) loadWallets();
-  }, [wallets.length, loadWallets]);
+  const { wallets, updateWallet } = useWalletStore();
 
   const wallet = wallets.find((w) => w.id === id);
   const walletIndex = wallets.findIndex((w) => w.id === id);
@@ -58,10 +53,6 @@ export default function EditWalletPage() {
 
   const watchedName = useWatch({ control: form.control, name: "name" });
   const watchedBalance = useWatch({ control: form.control, name: "balance" });
-
-  if (isLoading && wallets.length === 0) {
-    return <LoadingSpinner fullscreen />;
-  }
 
   if (!wallet) {
     return (

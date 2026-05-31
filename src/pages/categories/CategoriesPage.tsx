@@ -1,24 +1,14 @@
-import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Tag, Plus, ArrowLeft } from "lucide-react";
 import { useCategoryStore } from "@/stores/categoryStore";
 import CategoryItem from "@/components/categories/CategoryItem";
 import EmptyState from "@/components/shared/EmptyState";
-import LoadingSpinner from "@/components/shared/LoadingSpinner";
 import { useStickyHeader } from "@/hooks/useStickyHeader";
 
 export default function CategoriesPage() {
   const stickyHeader = useStickyHeader();
   const navigate = useNavigate();
-  const { categories, isLoading, loadCategories } = useCategoryStore();
-
-  useEffect(() => {
-    loadCategories();
-  }, [loadCategories]);
-
-  if (isLoading && categories.length === 0) {
-    return <LoadingSpinner fullscreen />;
-  }
+  const { categories } = useCategoryStore();
 
   const incomeCategories = categories.filter((c) => c.type === "income" || c.type === "both");
   const expenseCategories = categories.filter((c) => c.type === "expense" || c.type === "both");

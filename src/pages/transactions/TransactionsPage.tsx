@@ -2,26 +2,15 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus } from "lucide-react";
 import { useTransactionStore } from "@/stores/transactionStore";
-import { useWalletStore } from "@/stores/walletStore";
-import { useCategoryStore } from "@/stores/categoryStore";
 import TransactionFilter from "@/components/transactions/TransactionFilter";
 import TransactionList from "@/components/transactions/TransactionList";
-import LoadingSpinner from "@/components/shared/LoadingSpinner";
 import { localDateStr } from "@/lib/utils";
 import { useStickyHeader } from "@/hooks/useStickyHeader";
 
 export default function TransactionsPage() {
   const stickyHeader = useStickyHeader();
   const navigate = useNavigate();
-  const { isLoading: txLoading, loadTransactions, setFilter } = useTransactionStore();
-  const { loadWallets } = useWalletStore();
-  const { loadCategories } = useCategoryStore();
-
-  useEffect(() => {
-    loadTransactions();
-    loadWallets();
-    loadCategories();
-  }, [loadTransactions, loadWallets, loadCategories]);
+  const { setFilter } = useTransactionStore();
 
   // Restore last selected date from sessionStorage, fallback to today
   useEffect(() => {
@@ -29,10 +18,6 @@ export default function TransactionsPage() {
     const t = saved ?? localDateStr();
     setFilter({ dateFrom: t, dateTo: t });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  if (txLoading) {
-    return <LoadingSpinner fullscreen />;
-  }
 
   return (
     <div className="flex flex-col gap-4 pb-28">
@@ -44,7 +29,7 @@ export default function TransactionsPage() {
         <TransactionList />
       </div>
 
-      {/* FAB — fixed tapi dibatasi lebar container via left/right calc */}
+      {/* FAB */}
       <div className="fixed bottom-[calc(4rem+1.5rem)] left-1/2 z-40 w-full max-w-[480px] -translate-x-1/2 px-4 pointer-events-none">
         <div className="flex justify-end">
           <button

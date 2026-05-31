@@ -1,26 +1,16 @@
-import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Wallet, Plus, Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { useWalletStore } from "@/stores/walletStore";
 import WalletItem from "@/components/wallets/WalletItem";
 import EmptyState from "@/components/shared/EmptyState";
-import LoadingSpinner from "@/components/shared/LoadingSpinner";
 import { useBalanceVisibility } from "@/hooks/useBalanceVisibility";
 import { useStickyHeader } from "@/hooks/useStickyHeader";
 
 export default function WalletsPage() {
   const stickyHeader = useStickyHeader();
   const navigate = useNavigate();
-  const { wallets, isLoading, loadWallets } = useWalletStore();
+  const { wallets } = useWalletStore();
   const { isHidden, setIsHidden } = useBalanceVisibility();
-
-  useEffect(() => {
-    loadWallets();
-  }, [loadWallets]);
-
-  if (isLoading && wallets.length === 0) {
-    return <LoadingSpinner fullscreen />;
-  }
 
   return (
     <div>

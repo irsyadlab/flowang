@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus } from "lucide-react";
 import { useWalletStore } from "@/stores/walletStore";
@@ -6,25 +5,15 @@ import { useTransactionStore } from "@/stores/transactionStore";
 import SummaryCard from "@/components/dashboard/SummaryCard";
 import WalletList from "@/components/dashboard/WalletList";
 import RecentTransactions from "@/components/dashboard/RecentTransactions";
-import LoadingSpinner from "@/components/shared/LoadingSpinner";
 import { useBalanceVisibility } from "@/hooks/useBalanceVisibility";
 import { useStickyHeader } from "@/hooks/useStickyHeader";
 
 export default function Dashboard() {
   const stickyHeader = useStickyHeader();
   const navigate = useNavigate();
-  const { isLoading: walletLoading, loadWallets } = useWalletStore();
-  const { isLoading: txLoading, loadTransactions } = useTransactionStore();
+  useWalletStore();
+  useTransactionStore();
   const { isHidden, setIsHidden } = useBalanceVisibility();
-
-  useEffect(() => {
-    loadWallets();
-    loadTransactions();
-  }, [loadWallets, loadTransactions]);
-
-  if (walletLoading || txLoading) {
-    return <LoadingSpinner fullscreen />;
-  }
 
   return (
     <div className="flex flex-col gap-5 pb-6">

@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Handshake } from 'lucide-react';
 import { useLoanContacts } from '@/hooks/useLoanContacts';
@@ -6,24 +5,14 @@ import { useLoanEntryStore } from '@/stores/loanEntryStore';
 import { countContactsWithActiveLoans } from '@/lib/loanUtils';
 import ContactList from '@/components/loans/ContactList';
 import EmptyState from '@/components/shared/EmptyState';
-import LoadingSpinner from '@/components/shared/LoadingSpinner';
 import { Badge } from '@/components/ui/badge';
 import { useStickyHeader } from '@/hooks/useStickyHeader';
 
 export default function ContactListPage() {
   const stickyHeader = useStickyHeader();
   const navigate = useNavigate();
-  const { contacts, isLoading, summaries, loadContacts } = useLoanContacts();
-  const { entries, loadEntries } = useLoanEntryStore();
-
-  useEffect(() => {
-    loadContacts();
-    loadEntries();
-  }, [loadContacts, loadEntries]);
-
-  if (isLoading && contacts.length === 0) {
-    return <LoadingSpinner fullscreen />;
-  }
+  const { contacts, summaries } = useLoanContacts();
+  const { entries } = useLoanEntryStore();
 
   const activeCount = countContactsWithActiveLoans(
     contacts,

@@ -6,7 +6,6 @@ import { ArrowLeft, Save, TrendingUp, TrendingDown, ArrowLeftRight, Lock } from 
 import { useCategoryStore } from "@/stores/categoryStore";
 import { categorySchema, type CategoryInput } from "@/lib/validators";
 import ErrorMessage from "@/components/shared/ErrorMessage";
-import LoadingSpinner from "@/components/shared/LoadingSpinner";
 import {
   Form,
   FormControl,
@@ -48,11 +47,7 @@ export default function EditCategoryPage() {
   const stickyHeader = useStickyHeader();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { categories, isLoading, loadCategories, updateCategory } = useCategoryStore();
-
-  useEffect(() => {
-    if (categories.length === 0) loadCategories();
-  }, [categories.length, loadCategories]);
+  const { categories, updateCategory } = useCategoryStore();
 
   const category = categories.find((c) => c.id === id);
 
@@ -72,10 +67,6 @@ export default function EditCategoryPage() {
 
   const watchedName = useWatch({ control: form.control, name: "name" });
   const watchedType = useWatch({ control: form.control, name: "type" });
-
-  if (isLoading && categories.length === 0) {
-    return <LoadingSpinner fullscreen />;
-  }
 
   if (!category) {
     return (

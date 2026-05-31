@@ -1,10 +1,7 @@
-import { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { useLoanContacts } from '@/hooks/useLoanContacts';
 import { useLoanEntryStore } from '@/stores/loanEntryStore';
-import { useWalletStore } from '@/stores/walletStore';
-import { useCategoryStore } from '@/stores/categoryStore';
 import LoanForm from '@/components/loans/LoanForm';
 import type { LoanEntryFormData } from '@/types';
 import { useStickyHeader } from '@/hooks/useStickyHeader';
@@ -13,16 +10,8 @@ export default function NewLoanPage() {
   const stickyHeader = useStickyHeader();
   const navigate = useNavigate();
   const { contactId } = useParams<{ contactId: string }>();
-  const { loadContacts } = useLoanContacts();
+  useLoanContacts();
   const { addEntry } = useLoanEntryStore();
-  const { loadWallets } = useWalletStore();
-  const { loadCategories } = useCategoryStore();
-
-  useEffect(() => {
-    loadContacts();
-    loadWallets();
-    loadCategories();
-  }, [loadContacts, loadWallets, loadCategories]);
 
   const handleSubmit = async (data: LoanEntryFormData) => {
     await addEntry(data);

@@ -1,9 +1,7 @@
-import { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { useLoanEntries } from '@/hooks/useLoanEntries';
 import LoanForm from '@/components/loans/LoanForm';
-import LoadingSpinner from '@/components/shared/LoadingSpinner';
 import ErrorMessage from '@/components/shared/ErrorMessage';
 import type { LoanEntryFormData } from '@/types';
 import { useStickyHeader } from '@/hooks/useStickyHeader';
@@ -12,17 +10,9 @@ export default function EditLoanPage() {
   const stickyHeader = useStickyHeader();
   const navigate = useNavigate();
   const { contactId, entryId } = useParams<{ contactId: string; entryId: string }>();
-  const { entries, loadEntries, updateEntry, isLoading } = useLoanEntries();
-
-  useEffect(() => {
-    loadEntries();
-  }, [loadEntries]);
+  const { entries, updateEntry } = useLoanEntries();
 
   const entry = entries.find((e) => e.id === entryId);
-
-  if (isLoading && !entry) {
-    return <LoadingSpinner fullscreen />;
-  }
 
   if (!entry) {
     return <ErrorMessage message="Entri hutang tidak ditemukan" />;

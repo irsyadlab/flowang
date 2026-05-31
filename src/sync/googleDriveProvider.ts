@@ -391,10 +391,9 @@ async function performBackup(): Promise<void> {
       const encrypted = await encrypt(jsonBytes, key);
 
       const files = await listAppDataFiles(token);
-      const existing = files.find((f) => f.name === BACKUP_FILENAME);
-      if (existing) {
-        await deleteFile(existing.id, token);
-      }
+      const existingFiles = files.filter((f) => f.name === BACKUP_FILENAME);
+      // Delete all existing backups (there may be duplicates from previous failed attempts)
+      await Promise.all(existingFiles.map((f) => deleteFile(f.id, token)));
 
       await uploadFile(BACKUP_FILENAME, encrypted, token);
 

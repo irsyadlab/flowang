@@ -14,11 +14,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { DatePickerSheet, formatDateShortID } from '@/components/ui/date-picker-sheet';
 import { TimePickerSheet, formatTimeDisplay } from '@/components/ui/time-picker-sheet';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import ContactCombobox from '@/components/loans/ContactCombobox';
+import CategoryCombobox from '@/components/transactions/CategoryCombobox';
+import WalletCombobox from '@/components/transactions/WalletCombobox';
 import { TrendingUp, TrendingDown } from 'lucide-react';
-import { useWalletStore } from '@/stores/walletStore';
-import { useCategoryStore } from '@/stores/categoryStore';
 
 const loanEntrySchema = z.object({
   contactId: z.string().min(1, 'Kontak wajib dipilih'),
@@ -85,8 +84,6 @@ function formatAmount(value: number): string {
 
 export default function LoanForm({ mode, defaultContactId, entry, onSubmit }: LoanFormProps) {
   const today = localDateStr();
-  const wallets = useWalletStore((s) => s.wallets);
-  const categories = useCategoryStore((s) => s.categories);
 
   const form = useForm<LoanEntryFormValues>({
     resolver: zodResolver(loanEntrySchema),
@@ -261,21 +258,13 @@ export default function LoanForm({ mode, defaultContactId, entry, onSubmit }: Lo
                 <FormItem className="p-0">
                   <div className="flex items-center gap-3 px-4 py-3">
                     <span className="w-24 shrink-0 text-xs font-medium text-muted-foreground">Kategori</span>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value || ''}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="border-0 shadow-none p-0 h-auto text-sm font-medium focus:ring-0 bg-transparent">
-                          <SelectValue placeholder="Opsional..." />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {categories.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <CategoryCombobox
+                        value={field.value || ''}
+                        onChange={field.onChange}
+                        placeholder="Opsional..."
+                      />
+                    </FormControl>
                   </div>
                   <FormMessage className="px-4 pb-2 text-xs" />
                 </FormItem>
@@ -351,18 +340,13 @@ export default function LoanForm({ mode, defaultContactId, entry, onSubmit }: Lo
                   <FormItem className="p-0">
                     <div className="flex items-center gap-3 px-4 py-3">
                       <span className="w-24 shrink-0 text-xs font-medium text-muted-foreground">Wallet</span>
-                      <Select onValueChange={field.onChange} value={field.value || ''}>
-                        <FormControl>
-                          <SelectTrigger className="border-0 shadow-none p-0 h-auto text-sm font-medium focus:ring-0 bg-transparent">
-                            <SelectValue placeholder="Pilih wallet" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {wallets.map((w) => (
-                            <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormControl>
+                        <WalletCombobox
+                          value={field.value || ''}
+                          onChange={field.onChange}
+                          placeholder="Pilih wallet"
+                        />
+                      </FormControl>
                     </div>
                     <FormMessage className="px-4 pb-2 text-xs" />
                   </FormItem>
@@ -377,18 +361,13 @@ export default function LoanForm({ mode, defaultContactId, entry, onSubmit }: Lo
                   <FormItem className="p-0">
                     <div className="flex items-center gap-3 px-4 py-3">
                       <span className="w-24 shrink-0 text-xs font-medium text-muted-foreground">Kategori</span>
-                      <Select onValueChange={field.onChange} value={field.value || ''}>
-                        <FormControl>
-                          <SelectTrigger className="border-0 shadow-none p-0 h-auto text-sm font-medium focus:ring-0 bg-transparent">
-                            <SelectValue placeholder="Pilih kategori" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {categories.map((c) => (
-                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormControl>
+                        <CategoryCombobox
+                          value={field.value || ''}
+                          onChange={field.onChange}
+                          placeholder="Pilih kategori"
+                        />
+                      </FormControl>
                     </div>
                     <FormMessage className="px-4 pb-2 text-xs" />
                   </FormItem>

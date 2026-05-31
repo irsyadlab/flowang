@@ -2,15 +2,14 @@ import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { transactionSchema, type TransactionInput } from "@/lib/validators";
-import { useWalletStore } from "@/stores/walletStore";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { DatePickerSheet, formatDateShortID } from "@/components/ui/date-picker-sheet";
 import { TimePickerSheet, formatTimeDisplay } from "@/components/ui/time-picker-sheet";
 import { TrendingUp, TrendingDown, ArrowLeftRight } from "lucide-react";
 import { localDateStr, localTimeStr } from "@/lib/utils";
 import CategoryCombobox from "@/components/transactions/CategoryCombobox";
+import WalletCombobox from "@/components/transactions/WalletCombobox";
 
 interface TransactionFormProps {
   initialData?: TransactionInput;
@@ -31,8 +30,6 @@ function formatAmount(value: number): string {
 }
 
 export default function TransactionForm({ initialData, onSubmit, submitLabel = "Simpan" }: TransactionFormProps) {
-  const wallets = useWalletStore((s) => s.wallets);
-
   const today = localDateStr();
 
   const form = useForm<TransactionInput>({
@@ -148,18 +145,13 @@ export default function TransactionForm({ initialData, onSubmit, submitLabel = "
                   <span className="w-24 shrink-0 text-xs font-medium text-muted-foreground">
                     {isTransfer ? "Dari" : "Wallet"}
                   </span>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger className="border-0 shadow-none p-0 h-auto text-sm font-medium focus:ring-0 bg-transparent">
-                        <SelectValue placeholder="Pilih wallet" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {wallets.map((w) => (
-                        <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormControl>
+                    <WalletCombobox
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder="Pilih wallet"
+                    />
+                  </FormControl>
                 </div>
                 <FormMessage className="px-4 pb-2 text-xs" />
               </FormItem>
@@ -175,18 +167,14 @@ export default function TransactionForm({ initialData, onSubmit, submitLabel = "
                 <FormItem className="p-0">
                   <div className="flex items-center gap-3 px-4 py-3">
                     <span className="w-24 shrink-0 text-xs font-medium text-muted-foreground">Ke</span>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="border-0 shadow-none p-0 h-auto text-sm font-medium focus:ring-0 bg-transparent">
-                          <SelectValue placeholder="Pilih wallet tujuan" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {wallets.filter((w) => w.id !== watchWalletId).map((w) => (
-                          <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <WalletCombobox
+                        value={field.value ?? ""}
+                        onChange={field.onChange}
+                        excludeId={watchWalletId}
+                        placeholder="Pilih wallet tujuan"
+                      />
+                    </FormControl>
                   </div>
                   <FormMessage className="px-4 pb-2 text-xs" />
                 </FormItem>

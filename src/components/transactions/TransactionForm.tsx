@@ -40,7 +40,7 @@ export default function TransactionForm({ initialData, onSubmit, submitLabel = "
       walletId: "",
       toWalletId: "",
       categoryId: "",
-      date: today,
+      date: sessionStorage.getItem("tx_filter_date") ?? today,
       time: localTimeStr(),
       note: "",
     },
@@ -216,7 +216,10 @@ export default function TransactionForm({ initialData, onSubmit, submitLabel = "
                   <span className="w-24 shrink-0 text-xs font-medium text-muted-foreground">Tanggal</span>
                   <DatePickerSheet
                     value={field.value || today}
-                    onChange={field.onChange}
+                    onChange={(v) => {
+                      field.onChange(v);
+                      sessionStorage.setItem("tx_filter_date", v);
+                    }}
                     trigger={
                       <span className="flex-1 text-sm font-medium text-foreground">
                         {formatDateShortID(field.value || today)}

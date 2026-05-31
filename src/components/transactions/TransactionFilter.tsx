@@ -31,6 +31,7 @@ export default function TransactionFilter() {
   const activeDate = filter.dateFrom ?? today();
 
   const applyDate = (ymd: string) => {
+    sessionStorage.setItem("tx_filter_date", ymd);
     setFilter({ dateFrom: ymd, dateTo: ymd });
   };
 

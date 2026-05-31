@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Github, Scale, Cpu } from "lucide-react";
+import { ArrowLeft, Github, GitFork, Scale, Cpu } from "lucide-react";
 
 const VERSION = "0.1.0";
 
@@ -54,7 +54,7 @@ export default function AboutPage() {
         </p>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-6">
         {/* Creator & License */}
         <div className="rounded-xl border bg-card overflow-hidden">
           {/* Creator */}
@@ -70,6 +70,23 @@ export default function AboutPage() {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium">Creator</p>
               <p className="text-xs text-muted-foreground">irsyadulibad</p>
+            </div>
+            <span className="text-xs text-muted-foreground/60">github.com</span>
+          </a>
+
+          {/* Repository */}
+          <a
+            href="https://github.com/irsyadlab/flowang"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-muted/50 active:bg-muted border-b"
+          >
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+              <GitFork className="h-4 w-4 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium">Repository</p>
+              <p className="text-xs text-muted-foreground">irsyadlab/flowang</p>
             </div>
             <span className="text-xs text-muted-foreground/60">github.com</span>
           </a>

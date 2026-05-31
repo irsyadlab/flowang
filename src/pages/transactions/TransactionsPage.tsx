@@ -21,9 +21,10 @@ export default function TransactionsPage() {
     loadCategories();
   }, [loadTransactions, loadWallets, loadCategories]);
 
-  // Always set date filter to today on mount
+  // Restore last selected date from sessionStorage, fallback to today
   useEffect(() => {
-    const t = localDateStr();
+    const saved = sessionStorage.getItem("tx_filter_date");
+    const t = saved ?? localDateStr();
     setFilter({ dateFrom: t, dateTo: t });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

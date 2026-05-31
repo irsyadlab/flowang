@@ -34,6 +34,13 @@ import { usePeerCount } from '@/hooks/usePeerCount';
 import { usePeerDevices } from '@/hooks/usePeerDevices';
 import PeerDevicesDialog from '@/components/settings/PeerDevicesDialog';
 import { getDB } from '@/db/db';
+import { disconnect } from '@/sync/webrtcProvider';
+import { useWalletStore } from '@/stores/walletStore';
+import { useTransactionStore } from '@/stores/transactionStore';
+import { useCategoryStore } from '@/stores/categoryStore';
+import { useLoanEntryStore } from '@/stores/loanEntryStore';
+import { useLoanContactStore } from '@/stores/loanContactStore';
+import { useLoanRepaymentStore } from '@/stores/loanRepaymentStore';
 import { useStickyHeader } from '@/hooks/useStickyHeader';
 
 type SheetId = 'sync-key' | 'google-drive' | 'theme' | null;
@@ -98,6 +105,7 @@ export default function SettingsPage() {
       const db = getDB();
       if (!db) throw new Error('Database not initialized');
 
+      // Clear semua object stores di flowang-db
       const stores = ['transactions', 'wallets', 'categories', 'loan_contacts', 'loan_entries', 'loan_repayments'];
       await new Promise<void>((resolve, reject) => {
         const tx = db.transaction(stores, 'readwrite');
@@ -106,9 +114,30 @@ export default function SettingsPage() {
         stores.forEach((store) => tx.objectStore(store).clear());
       });
 
+      // Clear yjs-sync IndexedDB (Yjs CRDT state) supaya data lama
+      // tidak ter-broadcast ke perangkat lain saat sync aktif kembali
+      await new Promise<void>((resolve) => {
+        const req = indexedDB.deleteDatabase('yjs-sync');
+        req.onsuccess = () => resolve();
+        req.onerror = () => resolve(); // lanjut meski gagal
+        req.onblocked = () => resolve();
+      });
+
+      // Disconnect WebRTC provider supaya Yjs in-memory state juga bersih
+      disconnect();
+
+      // Reset semua in-memory state di Zustand stores
+      useTransactionStore.setState({ transactions: [] });
+      useWalletStore.setState({ wallets: [] });
+      useCategoryStore.setState({ categories: [] });
+      useLoanEntryStore.setState({ entries: [] });
+      useLoanContactStore.setState({ contacts: [] });
+      useLoanRepaymentStore.setState({ repayments: [] });
+
       sessionStorage.clear();
       setClearDialogOpen(false);
       toast.success('Semua data berhasil dihapus');
+      navigate('/');
     } catch {
       toast.error('Gagal menghapus data');
     } finally {

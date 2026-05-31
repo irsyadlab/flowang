@@ -6,7 +6,7 @@ import { getAllTransactions, addTransactionWithWalletUpdate } from '../db/transa
 import { useUIStore } from './uiStore';
 import { useSyncStore } from '../sync/syncStore';
 import { onLocalChange } from '../sync/syncManager';
-import { localDateStr, localISOString } from '../lib/utils';
+import { localDateStr, localISOString, localTimeStr } from '../lib/utils';
 
 interface WalletState {
   wallets: Wallet[];
@@ -91,8 +91,10 @@ export const useWalletStore = create<WalletState & WalletActions>((set, get) => 
         const oldBalance = existing.initialBalance;
         const newBalance = data.initialBalance!;
         const delta = newBalance - oldBalance;
-        const today = localDateStr();
-        const now = localISOString();
+        const now = new Date();
+        const today = localDateStr(now);
+        const nowISO = localISOString(now);
+        const currentTime = localTimeStr(now);
         
         const correctionTx: Transaction = {
           id: crypto.randomUUID(),
@@ -100,17 +102,18 @@ export const useWalletStore = create<WalletState & WalletActions>((set, get) => 
           amount: Math.abs(delta),
           walletId: id,
           date: today,
+          time: currentTime,
           note: `Koreksi saldo: ${existing.name}`,
           isCorrection: true,
-          createdAt: now,
-          updatedAt: now,
+          createdAt: nowISO,
+          updatedAt: nowISO,
         };
         
         const updatedWallet: Wallet = {
           ...existing,
           ...data,
           balance: existing.balance + delta,
-          updatedAt: now,
+          updatedAt: nowISO,
         };
         
         await addTransactionWithWalletUpdate(db, updatedWallet, correctionTx);

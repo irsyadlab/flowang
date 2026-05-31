@@ -32,6 +32,7 @@ import ConfirmDialog from '@/components/shared/ConfirmDialog';
 import { generateSyncKey, encodeSyncKey } from '@/sync/syncKeyUtils';
 import { usePeerCount } from '@/hooks/usePeerCount';
 import { getDB } from '@/db/db';
+import { useStickyHeader } from '@/hooks/useStickyHeader';
 
 type SheetId = 'sync-key' | 'google-drive' | 'theme' | null;
 
@@ -42,6 +43,7 @@ const THEME_LABEL: Record<string, string> = {
 };
 
 export default function SettingsPage() {
+  const stickyHeader = useStickyHeader();
   const { syncStatus, syncKey, connect } = useSync();
   const { theme } = useTheme();
   const { googleAuthToken, googleUserInfo, lastBackupTimestamp } = useSync();
@@ -182,7 +184,7 @@ export default function SettingsPage() {
 
   return (
     <div>
-      <div className="sticky top-0 z-30 bg-background px-4 flex items-center gap-2 py-6">
+      <div className={`${stickyHeader} px-4 flex items-center gap-2 py-6`}>
         <button
           type="button"
           onClick={() => navigate(-1)}

@@ -7,8 +7,10 @@ import WalletDetailHeader from "@/components/wallets/WalletDetailHeader";
 import WalletTransactionList from "@/components/wallets/WalletTransactionList";
 import ErrorMessage from "@/components/shared/ErrorMessage";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
+import { useStickyHeader } from "@/hooks/useStickyHeader";
 
 export default function WalletDetailPage() {
+  const stickyHeader = useStickyHeader();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const wallets = useWalletStore((s) => s.wallets);
@@ -35,7 +37,7 @@ export default function WalletDetailPage() {
   return (
     <div>
       {/* Header */}
-      <div className="sticky top-0 z-30 bg-background px-4 flex items-center justify-between py-3">
+      <div className={`${stickyHeader} px-4 flex items-center justify-between py-3`}>
         <div className="flex items-center gap-2">
           <button
             type="button"

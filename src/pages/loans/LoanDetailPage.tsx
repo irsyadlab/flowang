@@ -11,8 +11,10 @@ import ConfirmDialog from '@/components/shared/ConfirmDialog';
 import ResponsiveSheet from '@/components/shared/ResponsiveSheet';
 import { Button } from '@/components/ui/button';
 import type { LoanEntry } from '@/types';
+import { useStickyHeader } from '@/hooks/useStickyHeader';
 
 export default function LoanDetailPage() {
+  const stickyHeader = useStickyHeader();
   const navigate = useNavigate();
   const {
     contactId,
@@ -44,7 +46,7 @@ export default function LoanDetailPage() {
   return (
     <div>
       {/* Header */}
-      <div className="sticky top-0 z-30 bg-background px-4 flex items-center gap-2 py-3">
+      <div className={`${stickyHeader} px-4 flex items-center gap-2 py-3`}>
         <button
           type="button"
           onClick={() => navigate('/loans')}

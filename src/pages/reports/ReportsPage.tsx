@@ -13,8 +13,10 @@ import CustomReport from "@/components/reports/CustomReport";
 import LoanReportSection from "@/components/loans/LoanReportSection";
 import ErrorMessage from "@/components/shared/ErrorMessage";
 import LoadingSpinner from "@/components/shared/LoadingSpinner";
+import { useStickyHeader } from "@/hooks/useStickyHeader";
 
 export default function ReportsPage() {
+  const stickyHeader = useStickyHeader();
   const navigate = useNavigate();
   const { isLoading: txLoading, error: txError, loadTransactions } = useTransactionStore();
   const { loadWallets } = useWalletStore();
@@ -56,7 +58,7 @@ export default function ReportsPage() {
 
   return (
     <div className="flex flex-col gap-4 pb-6">
-      <div className="sticky top-0 z-30 bg-background px-4 py-3">
+      <div className={`${stickyHeader} px-4 py-3`}>
         <h1 className="text-xl font-bold text-foreground">Laporan</h1>
       </div>
       <div className="px-4 flex flex-col gap-4">

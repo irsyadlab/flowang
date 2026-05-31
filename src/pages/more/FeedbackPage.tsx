@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Send, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useStickyHeader } from "@/hooks/useStickyHeader";
 
 const FORMBOLD_ACTION = "https://formbold.com/s/91mAa";
 
@@ -15,6 +16,7 @@ const CATEGORIES = [
 ];
 
 export default function FeedbackPage() {
+  const stickyHeader = useStickyHeader();
   const navigate = useNavigate();
   const [status, setStatus] = useState<Status>("idle");
   const [category, setCategory] = useState(CATEGORIES[0].value);
@@ -50,7 +52,7 @@ export default function FeedbackPage() {
   return (
     <div>
       {/* Header */}
-      <div className="sticky top-0 z-30 bg-background px-4 flex items-center gap-3 py-3">
+      <div className={`${stickyHeader} px-4 flex items-center gap-3 py-3`}>
         <button
           type="button"
           onClick={() => navigate(-1)}

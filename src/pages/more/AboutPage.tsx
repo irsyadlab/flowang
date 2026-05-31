@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Github, GitFork, Scale, Cpu } from "lucide-react";
+import { useStickyHeader } from "@/hooks/useStickyHeader";
 
 const VERSION = "0.1.0";
 
@@ -14,12 +15,13 @@ const TECH_STACK = [
 ];
 
 export default function AboutPage() {
+  const stickyHeader = useStickyHeader();
   const navigate = useNavigate();
 
   return (
     <div>
       {/* Header */}
-      <div className="sticky top-0 z-30 bg-background px-4 flex items-center gap-3 py-3">
+      <div className={`${stickyHeader} px-4 flex items-center gap-3 py-3`}>
         <button
           type="button"
           onClick={() => navigate(-1)}

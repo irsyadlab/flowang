@@ -7,8 +7,10 @@ import { useWalletStore } from '@/stores/walletStore';
 import { useCategoryStore } from '@/stores/categoryStore';
 import LoanForm from '@/components/loans/LoanForm';
 import type { LoanEntryFormData } from '@/types';
+import { useStickyHeader } from '@/hooks/useStickyHeader';
 
 export default function NewLoanPage() {
+  const stickyHeader = useStickyHeader();
   const navigate = useNavigate();
   const { contactId } = useParams<{ contactId: string }>();
   const { loadContacts } = useLoanContacts();
@@ -30,7 +32,7 @@ export default function NewLoanPage() {
   return (
     <div>
       {/* Header */}
-      <div className="sticky top-0 z-30 bg-background px-4 flex items-center gap-3 pt-5 pb-4">
+      <div className={`${stickyHeader} px-4 flex items-center gap-3 pt-5 pb-4`}>
         <button
           type="button"
           onClick={() => navigate(-1)}

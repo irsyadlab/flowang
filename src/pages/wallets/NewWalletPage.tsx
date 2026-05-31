@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useStickyHeader } from "@/hooks/useStickyHeader";
 
 const WALLET_GRADIENTS = [
   "wallet-card-1",
@@ -25,6 +26,7 @@ const WALLET_GRADIENTS = [
 ];
 
 export default function NewWalletPage() {
+  const stickyHeader = useStickyHeader();
   const navigate = useNavigate();
   const { addWallet, wallets } = useWalletStore();
 
@@ -51,7 +53,7 @@ export default function NewWalletPage() {
   return (
     <div>
       {/* Header */}
-      <div className="sticky top-0 z-30 bg-background px-4 flex items-center gap-3 pt-5 pb-4">
+      <div className={`${stickyHeader} px-4 flex items-center gap-3 pt-5 pb-4`}>
         <button
           type="button"
           onClick={() => navigate(-1)}

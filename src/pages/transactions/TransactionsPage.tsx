@@ -8,8 +8,10 @@ import TransactionFilter from "@/components/transactions/TransactionFilter";
 import TransactionList from "@/components/transactions/TransactionList";
 import LoadingSpinner from "@/components/shared/LoadingSpinner";
 import { localDateStr } from "@/lib/utils";
+import { useStickyHeader } from "@/hooks/useStickyHeader";
 
 export default function TransactionsPage() {
+  const stickyHeader = useStickyHeader();
   const navigate = useNavigate();
   const { isLoading: txLoading, loadTransactions, setFilter } = useTransactionStore();
   const { loadWallets } = useWalletStore();
@@ -34,7 +36,7 @@ export default function TransactionsPage() {
 
   return (
     <div className="flex flex-col gap-4 pb-28">
-      <div className="sticky top-0 z-30 bg-background px-4 py-3">
+      <div className={`${stickyHeader} px-4 py-3`}>
         <h1 className="text-xl font-bold text-foreground">Transaksi</h1>
       </div>
       <div className="px-4 flex flex-col gap-4">

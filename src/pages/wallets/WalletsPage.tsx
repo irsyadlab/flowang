@@ -6,8 +6,10 @@ import WalletItem from "@/components/wallets/WalletItem";
 import EmptyState from "@/components/shared/EmptyState";
 import LoadingSpinner from "@/components/shared/LoadingSpinner";
 import { useBalanceVisibility } from "@/hooks/useBalanceVisibility";
+import { useStickyHeader } from "@/hooks/useStickyHeader";
 
 export default function WalletsPage() {
+  const stickyHeader = useStickyHeader();
   const navigate = useNavigate();
   const { wallets, isLoading, loadWallets } = useWalletStore();
   const { isHidden, setIsHidden } = useBalanceVisibility();
@@ -22,7 +24,7 @@ export default function WalletsPage() {
 
   return (
     <div>
-      <div className="sticky top-0 z-30 bg-background px-4 flex items-center justify-between py-3">
+      <div className={`${stickyHeader} px-4 flex items-center justify-between py-3`}>
         <div className="flex items-center gap-2">
           <button
             type="button"

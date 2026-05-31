@@ -7,6 +7,7 @@ import {
   HardDrive,
   UserCog,
 } from "lucide-react";
+import { useStickyHeader } from "@/hooks/useStickyHeader";
 
 const LAST_UPDATED = "29 Mei 2026";
 
@@ -166,6 +167,7 @@ const sections: Section[] = [
 ];
 
 export default function PrivacyPolicyPage() {
+  const stickyHeader = useStickyHeader();
   const navigate = useNavigate();
 
   const handleBack = () => {
@@ -179,7 +181,7 @@ export default function PrivacyPolicyPage() {
   return (
     <div>
       {/* Header */}
-      <div className="sticky top-0 z-30 bg-background px-4 flex items-center gap-3 py-3">
+      <div className={`${stickyHeader} px-4 flex items-center gap-3 py-3`}>
         <button
           type="button"
           onClick={handleBack}

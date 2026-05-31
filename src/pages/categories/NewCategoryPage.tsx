@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import type { CategoryType } from "@/types";
+import { useStickyHeader } from "@/hooks/useStickyHeader";
 
 const TYPE_OPTIONS: { value: CategoryType; label: string; icon: React.ReactNode; colorClass: string; bgClass: string }[] = [
   {
@@ -41,6 +42,7 @@ const TYPE_OPTIONS: { value: CategoryType; label: string; icon: React.ReactNode;
 ];
 
 export default function NewCategoryPage() {
+  const stickyHeader = useStickyHeader();
   const navigate = useNavigate();
   const { addCategory, categories } = useCategoryStore();
 
@@ -69,7 +71,7 @@ export default function NewCategoryPage() {
   return (
     <div>
       {/* Header */}
-      <div className="sticky top-0 z-30 bg-background px-4 flex items-center gap-3 pt-5 pb-4">
+      <div className={`${stickyHeader} px-4 flex items-center gap-3 pt-5 pb-4`}>
         <button
           type="button"
           onClick={() => navigate(-1)}

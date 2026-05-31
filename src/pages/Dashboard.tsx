@@ -8,8 +8,10 @@ import WalletList from "@/components/dashboard/WalletList";
 import RecentTransactions from "@/components/dashboard/RecentTransactions";
 import LoadingSpinner from "@/components/shared/LoadingSpinner";
 import { useBalanceVisibility } from "@/hooks/useBalanceVisibility";
+import { useStickyHeader } from "@/hooks/useStickyHeader";
 
 export default function Dashboard() {
+  const stickyHeader = useStickyHeader();
   const navigate = useNavigate();
   const { isLoading: walletLoading, loadWallets } = useWalletStore();
   const { isLoading: txLoading, loadTransactions } = useTransactionStore();
@@ -27,7 +29,7 @@ export default function Dashboard() {
   return (
     <div className="flex flex-col gap-5 pb-6">
       {/* Page header */}
-      <div className="sticky top-0 z-30 bg-background px-4 flex items-center justify-between py-3">
+      <div className={`${stickyHeader} px-4 flex items-center justify-between py-3`}>
         <div>
           <h1 className="text-xl font-bold text-foreground leading-tight">Flowang</h1>
           <p className="text-xs text-muted-foreground">Catatan keuangan pribadi</p>

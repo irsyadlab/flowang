@@ -8,8 +8,10 @@ import ContactList from '@/components/loans/ContactList';
 import EmptyState from '@/components/shared/EmptyState';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
 import { Badge } from '@/components/ui/badge';
+import { useStickyHeader } from '@/hooks/useStickyHeader';
 
 export default function ContactListPage() {
+  const stickyHeader = useStickyHeader();
   const navigate = useNavigate();
   const { contacts, isLoading, summaries, loadContacts } = useLoanContacts();
   const { entries, loadEntries } = useLoanEntryStore();
@@ -30,7 +32,7 @@ export default function ContactListPage() {
 
   return (
     <div className="flex flex-col gap-4 pb-28">
-      <div className="sticky top-0 z-30 bg-background px-4 py-3 flex items-center gap-2">
+      <div className={`${stickyHeader} px-4 py-3 flex items-center gap-2`}>
         <h1 className="text-xl font-bold text-foreground">Hutang</h1>
         {activeCount > 0 && (
           <Badge variant="secondary" className="text-[10px]">

@@ -5,8 +5,10 @@ import { useCategoryStore } from "@/stores/categoryStore";
 import CategoryItem from "@/components/categories/CategoryItem";
 import EmptyState from "@/components/shared/EmptyState";
 import LoadingSpinner from "@/components/shared/LoadingSpinner";
+import { useStickyHeader } from "@/hooks/useStickyHeader";
 
 export default function CategoriesPage() {
+  const stickyHeader = useStickyHeader();
   const navigate = useNavigate();
   const { categories, isLoading, loadCategories } = useCategoryStore();
 
@@ -23,7 +25,7 @@ export default function CategoriesPage() {
 
   return (
     <div>
-      <div className="sticky top-0 z-30 bg-background px-4 flex items-center justify-between py-3">
+      <div className={`${stickyHeader} px-4 flex items-center justify-between py-3`}>
         <div className="flex items-center gap-2">
           <button
             type="button"

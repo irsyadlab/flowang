@@ -7,6 +7,7 @@ import type { LucideIcon } from "lucide-react";
 import { useSyncStore } from "@/sync/syncStore";
 import { useTourStore } from "@/stores/tourStore";
 import { getSyncIndicatorColor } from "@/lib/navUtils";
+import { useStickyHeader } from "@/hooks/useStickyHeader";
 
 interface NavItem {
   to?: string;
@@ -54,6 +55,7 @@ function NavRow({ item, onClick }: { item: NavItem; onClick: () => void }) {
 }
 
 export default function MorePage() {
+  const stickyHeader = useStickyHeader();
   const navigate = useNavigate();
   const restartTour = useTourStore((s) => s.restartTour);
 
@@ -90,7 +92,7 @@ export default function MorePage() {
 
   return (
     <div className="pb-24">
-      <div className="sticky top-0 z-30 bg-background px-4 py-3">
+      <div className={`${stickyHeader} px-4 py-3`}>
         <h1 className="text-lg font-semibold">Lainnya</h1>
       </div>
       <div className="px-4 space-y-6">

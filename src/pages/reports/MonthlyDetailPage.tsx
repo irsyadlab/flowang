@@ -6,6 +6,7 @@ import MonthlyReportChart from "@/components/reports/MonthlyReportChart";
 import MonthlyReportCategory from "@/components/reports/MonthlyReportCategory";
 import MonthlyReportNote from "@/components/reports/MonthlyReportNote";
 import { localDateStr } from "@/lib/utils";
+import { useStickyHeader } from "@/hooks/useStickyHeader";
 
 const MONTH_NAMES = [
   "Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -13,6 +14,7 @@ const MONTH_NAMES = [
 ];
 
 export default function MonthlyDetailPage() {
+  const stickyHeader = useStickyHeader();
   const { year, month } = useParams<{ year: string; month: string }>();
   const navigate = useNavigate();
 
@@ -39,7 +41,7 @@ export default function MonthlyDetailPage() {
   return (
     <div>
       {/* Header */}
-      <div className="sticky top-0 z-30 bg-background px-4 flex items-center gap-2 py-3">
+      <div className={`${stickyHeader} px-4 flex items-center gap-2 py-3`}>
         <button
           type="button"
           onClick={() => navigate(-1)}

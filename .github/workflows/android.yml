@@ -8,6 +8,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -18,10 +20,11 @@ jobs:
           java-version: "17"
           distribution: "temurin"
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android Build Tools & Platforms
+        run: sdkmanager "platforms;android-36" "build-tools;34.0.0" "platform-tools"
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -29,39 +32,52 @@ jobs:
           build-root-directory: android
           cache-read-only: false
 
-      - name: Install Bubblewrap
-        run: npm install -g @bubblewrap/cli
-
       - name: Restore android.keystore
-        run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android.keystore
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android.keystore
         working-directory: android
 
-      - name: Restore keystore.json
+      - name: Build Release AAB (Play Store)
+        run: ./gradlew bundleRelease
+        working-directory: android
+        env:
+          KEYSTORE_PATH: ${{ github.workspace }}/android/android.keystore
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: android
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Sign AAB
         run: |
-          echo '${{ secrets.ANDROID_KEYSTORE_JSON }}' > keystore.json
+          jarsigner -verbose \
+            -sigalg SHA256withRSA \
+            -digestalg SHA-256 \
+            -keystore android.keystore \
+            -storepass "${{ secrets.KEYSTORE_PASSWORD }}" \
+            -keypass "${{ secrets.KEY_PASSWORD }}" \
+            app/build/outputs/bundle/release/app-release.aab android
+          cp app/build/outputs/bundle/release/app-release.aab app-release-bundle.aab
         working-directory: android
 
-      - name: Build TWA (for Play Store)
-        run: |
-          bubblewrap build --skipPwaValidation \
-            --signingKeyPath android.keystore \
-            --signingKeyStorePassword "${{ secrets.KEYSTORE_PASSWORD }}" \
-            --signingKeyAliasPassword "${{ secrets.KEY_PASSWORD }}" \
-            --jdkPath "$JAVA_HOME_17_X64" \
-            --androidSdkPath "$ANDROID_HOME" \
-            --target AAB
+      - name: Build Release APK (Sideload/Testing)
+        run: ./gradlew assembleRelease
         working-directory: android
+        env:
+          KEYSTORE_PATH: ${{ github.workspace }}/android/android.keystore
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: android
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
-      - name: Build TWA (APK for Sideload/Testing)
+      - name: Sign APK
         run: |
-          bubblewrap build --skipPwaValidation \
-            --signingKeyPath android.keystore \
-            --signingKeyStorePassword "${{ secrets.KEYSTORE_PASSWORD }}" \
-            --signingKeyAliasPassword "${{ secrets.KEY_PASSWORD }}" \
-            --jdkPath "$JAVA_HOME_17_X64" \
-            --androidSdkPath "$ANDROID_HOME" \
-            --target APK
+          $ANDROID_SDK_ROOT/build-tools/34.0.0/zipalign -v -p 4 \
+            app/build/outputs/apk/release/app-release-unsigned.apk \
+            app-release-aligned.apk
+          $ANDROID_SDK_ROOT/build-tools/34.0.0/apksigner sign \
+            --ks android.keystore \
+            --ks-pass "pass:${{ secrets.KEYSTORE_PASSWORD }}" \
+            --key-pass "pass:${{ secrets.KEY_PASSWORD }}" \
+            --ks-key-alias android \
+            --out app-release-signed.apk \
+            app-release-aligned.apk
         working-directory: android
 
       - name: Upload Artifacts ke GitHub

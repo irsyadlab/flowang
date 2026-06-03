@@ -32,3 +32,12 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # Finder (MacOS) folder config
 .DS_Store
+
+# Android / TWA (Bubblewrap)
+android/build/
+android/app/build/
+android/.gradle/
+android/*.keystore
+android/keystore.json
+android/app-release-signed.aab
+android/app-release-signed.apk

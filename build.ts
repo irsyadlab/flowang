@@ -37,7 +37,7 @@ Example:
 
 // Helper function to convert kebab-case to camelCase
 const toCamelCase = (str: string): string => {
-  return str.replace(/-([a-z])/g, g => g[1].toUpperCase());
+  return str.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
 };
 
 // Helper function to parse a value into appropriate type
@@ -51,7 +51,7 @@ const parseValue = (value: string): any => {
   if (/^\d*\.\d+$/.test(value)) return parseFloat(value);
 
   // Handle arrays (comma-separated)
-  if (value.includes(",")) return value.split(",").map(v => v.trim());
+  if (value.includes(",")) return value.split(",").map((v) => v.trim());
 
   // Default to string
   return value;
@@ -74,7 +74,10 @@ function parseArgs(): Partial<BuildConfig> {
     }
 
     // Handle --flag (boolean true)
-    if (!arg.includes("=") && (i === args.length - 1 || args[i + 1].startsWith("--"))) {
+    if (
+      !arg.includes("=") &&
+      (i === args.length - 1 || args[i + 1].startsWith("--"))
+    ) {
       const key = toCamelCase(arg.slice(2));
       config[key] = true;
       continue;
@@ -137,8 +140,14 @@ const start = performance.now();
 // Copy PWA static files (sw.js, manifest.json, icons/) to outdir
 const staticFiles = [
   { src: path.join("public", "sw.js"), dest: path.join(outdir, "sw.js") },
-  { src: path.join("public", "manifest.json"), dest: path.join(outdir, "manifest.json") },
-  { src: path.join("public", "robots.txt"), dest: path.join(outdir, "robots.txt") },
+  {
+    src: path.join("public", "manifest.json"),
+    dest: path.join(outdir, "manifest.json"),
+  },
+  {
+    src: path.join("public", "robots.txt"),
+    dest: path.join(outdir, "robots.txt"),
+  },
 ];
 
 const iconsDir = path.join("public", "icons");
@@ -168,6 +177,20 @@ if (existsSync(screenshotsDir)) {
   }
 }
 
+// Copy .well-known/ for TWA Digital Asset Links verification
+const wellKnownDir = path.join("public", ".well-known");
+if (existsSync(wellKnownDir)) {
+  const { readdir } = await import("fs/promises");
+  const outWellKnownDir = path.join(outdir, ".well-known");
+  const wellKnownFiles = await readdir(wellKnownDir);
+  for (const file of wellKnownFiles) {
+    staticFiles.push({
+      src: path.join(wellKnownDir, file),
+      dest: path.join(outWellKnownDir, file),
+    });
+  }
+}
+
 const { copyFile: copy, mkdir } = await import("fs/promises");
 for (const { src, dest } of staticFiles) {
   if (existsSync(src)) {
@@ -178,25 +201,27 @@ for (const { src, dest } of staticFiles) {
 
 // Scan for all HTML files in the project
 const entrypoints = [...new Bun.Glob("**.html").scanSync("src")]
-  .map(a => path.resolve("src", a))
-  .filter(dir => !dir.includes("node_modules"));
-console.log(`📄 Found ${entrypoints.length} HTML ${entrypoints.length === 1 ? "file" : "files"} to process\n`);
+  .map((a) => path.resolve("src", a))
+  .filter((dir) => !dir.includes("node_modules"));
+console.log(
+  `📄 Found ${entrypoints.length} HTML ${entrypoints.length === 1 ? "file" : "files"} to process\n`,
+);
 
 // Build all the HTML files
 const envDefines: Record<string, string> = {};
 const envKeys = [
-  'BUN_PUBLIC_WEBRTC_SIGNALING_URL',
-  'BUN_PUBLIC_GOOGLE_CLIENT_ID',
-  'BUN_PUBLIC_GOOGLE_API_KEY',
-  'BUN_PUBLIC_STUN_URL',
-  'BUN_PUBLIC_TURN_URL_1',
-  'BUN_PUBLIC_TURN_URL_2',
-  'BUN_PUBLIC_TURN_USERNAME',
-  'BUN_PUBLIC_TURN_CREDENTIAL',
+  "BUN_PUBLIC_WEBRTC_SIGNALING_URL",
+  "BUN_PUBLIC_GOOGLE_CLIENT_ID",
+  "BUN_PUBLIC_GOOGLE_API_KEY",
+  "BUN_PUBLIC_STUN_URL",
+  "BUN_PUBLIC_TURN_URL_1",
+  "BUN_PUBLIC_TURN_URL_2",
+  "BUN_PUBLIC_TURN_USERNAME",
+  "BUN_PUBLIC_TURN_CREDENTIAL",
 ];
 for (const key of envKeys) {
   const val = process.env[key];
-  envDefines[`process.env.${key}`] = JSON.stringify(val ?? '');
+  envDefines[`process.env.${key}`] = JSON.stringify(val ?? "");
 }
 
 const result = await build({
@@ -216,10 +241,10 @@ const result = await build({
 // Print the results
 const end = performance.now();
 
-const outputTable = result.outputs.map(output => ({
-  "File": path.relative(process.cwd(), output.path),
-  "Type": output.kind,
-  "Size": formatFileSize(output.size),
+const outputTable = result.outputs.map((output) => ({
+  File: path.relative(process.cwd(), output.path),
+  Type: output.kind,
+  Size: formatFileSize(output.size),
 }));
 
 console.table(outputTable);
@@ -229,14 +254,14 @@ console.table(outputTable);
 // so they are available at runtime without needing a Bun server.
 const envJs = path.join(outdir, "env.js");
 const envVarNames = [
-  'BUN_PUBLIC_WEBRTC_SIGNALING_URL',
-  'BUN_PUBLIC_GOOGLE_CLIENT_ID',
-  'BUN_PUBLIC_GOOGLE_API_KEY',
-  'BUN_PUBLIC_STUN_URL',
-  'BUN_PUBLIC_TURN_URL_1',
-  'BUN_PUBLIC_TURN_URL_2',
-  'BUN_PUBLIC_TURN_USERNAME',
-  'BUN_PUBLIC_TURN_CREDENTIAL',
+  "BUN_PUBLIC_WEBRTC_SIGNALING_URL",
+  "BUN_PUBLIC_GOOGLE_CLIENT_ID",
+  "BUN_PUBLIC_GOOGLE_API_KEY",
+  "BUN_PUBLIC_STUN_URL",
+  "BUN_PUBLIC_TURN_URL_1",
+  "BUN_PUBLIC_TURN_URL_2",
+  "BUN_PUBLIC_TURN_USERNAME",
+  "BUN_PUBLIC_TURN_CREDENTIAL",
 ];
 const envObj: Record<string, string> = {};
 for (const key of envVarNames) {
@@ -244,12 +269,17 @@ for (const key of envVarNames) {
   if (val) envObj[key] = val;
 }
 await Bun.write(envJs, `window.__ENV__=${JSON.stringify(envObj)};`);
-console.log(`🔑 env.js generated with ${Object.keys(envObj).length} variable(s)`);
+console.log(
+  `🔑 env.js generated with ${Object.keys(envObj).length} variable(s)`,
+);
 
 // Inject <script src="/env.js"> into dist/index.html before the app bundle
 const htmlPath = path.join(outdir, "index.html");
 let html = await Bun.file(htmlPath).text();
-html = html.replace('<script type="module"', '<script src="/env.js"></script>\n  <script type="module"');
+html = html.replace(
+  '<script type="module"',
+  '<script src="/env.js"></script>\n  <script type="module"',
+);
 await Bun.write(htmlPath, html);
 const { readFile, writeFile } = await import("fs/promises");
 const distHtml = await readFile(path.join(outdir, "index.html"), "utf-8");
@@ -257,6 +287,12 @@ const distHtml = await readFile(path.join(outdir, "index.html"), "utf-8");
 // Extract hashed paths for both icon sizes
 const icon192Match = distHtml.match(/href="\.\/([^"]*icon-192[^"]*\.png)"/);
 const icon512Match = distHtml.match(/href="\.\/([^"]*icon-512[^"]*\.png)"/);
+const icon192MaskableMatch = distHtml.match(
+  /href="\.\/([^"]*icon-192-maskable[^"]*\.png)"/,
+);
+const icon512MaskableMatch = distHtml.match(
+  /href="\.\/([^"]*icon-512-maskable[^"]*\.png)"/,
+);
 
 const manifestPath = path.join(outdir, "manifest.json");
 if (existsSync(manifestPath) && (icon192Match || icon512Match)) {
@@ -266,13 +302,25 @@ if (existsSync(manifestPath) && (icon192Match || icon512Match)) {
       src: `/${icon192Match[1]}`,
       sizes: "192x192",
       type: "image/png",
-      purpose: "any maskable",
+      purpose: "any",
+    },
+    icon192MaskableMatch && {
+      src: `/${icon192MaskableMatch[1]}`,
+      sizes: "192x192",
+      type: "image/png",
+      purpose: "maskable",
     },
     icon512Match && {
       src: `/${icon512Match[1]}`,
       sizes: "512x512",
       type: "image/png",
-      purpose: "any maskable",
+      purpose: "any",
+    },
+    icon512MaskableMatch && {
+      src: `/${icon512MaskableMatch[1]}`,
+      sizes: "512x512",
+      type: "image/png",
+      purpose: "maskable",
     },
   ].filter(Boolean);
   await writeFile(manifestPath, JSON.stringify(manifest, null, 2));
@@ -285,18 +333,19 @@ const swPath = path.join(outdir, "sw.js");
 if (existsSync(swPath)) {
   // Collect all cacheable assets from the build output
   const cacheableAssets = result.outputs
-    .filter((o) => ['entry-point', 'asset', 'chunk'].includes(o.kind))
+    .filter((o) => ["entry-point", "asset", "chunk"].includes(o.kind))
     .map((o) => `/${path.relative(outdir, o.path)}`)
-    .filter((p) => !p.endsWith('.map')); // skip sourcemaps
+    .filter((p) => !p.endsWith(".map")); // skip sourcemaps
 
   // Always include root and manifest
-  const precacheUrls = ['/', '/manifest.json', ...cacheableAssets]
-    .filter((v, i, a) => a.indexOf(v) === i); // dedupe
+  const precacheUrls = ["/", "/manifest.json", ...cacheableAssets].filter(
+    (v, i, a) => a.indexOf(v) === i,
+  ); // dedupe
 
   let swContent = await readFile(swPath, "utf-8");
   swContent = swContent.replace(
     /const PRECACHE_URLS = \[[\s\S]*?\];/,
-    `const PRECACHE_URLS = ${JSON.stringify(precacheUrls, null, 2)};`
+    `const PRECACHE_URLS = ${JSON.stringify(precacheUrls, null, 2)};`,
   );
   await writeFile(swPath, swContent);
   console.log(`📦 sw.js updated with ${precacheUrls.length} pre-cached URLs`);

@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "id.my.irsyadulibad.flowang.twa",
+      "sha256_cert_fingerprints": [
+        "4C:18:2F:BA:C6:D8:C6:08:15:1D:1D:38:2B:2D:30:D9:A6:BC:A1:E3:C2:90:B4:AB:66:97:25:87:86:D2:30:D7"
+      ]
+    }
+  }
+]

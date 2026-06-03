@@ -42,21 +42,25 @@ jobs:
           echo '${{ secrets.ANDROID_KEYSTORE_JSON }}' > keystore.json
         working-directory: android
 
-      - name: Build TWA (AAB untuk Play Store)
+      - name: Build TWA (for Play Store)
         run: |
           bubblewrap build --skipPwaValidation \
             --signingKeyPath android.keystore \
             --signingKeyStorePassword "${{ secrets.KEYSTORE_PASSWORD }}" \
             --signingKeyAliasPassword "${{ secrets.KEY_PASSWORD }}" \
+            --jdkPath "$JAVA_HOME_17_X64" \
+            --androidSdkPath "$ANDROID_HOME" \
             --target AAB
         working-directory: android
 
-      - name: Build TWA (APK untuk Sideload/Testing)
+      - name: Build TWA (APK for Sideload/Testing)
         run: |
           bubblewrap build --skipPwaValidation \
             --signingKeyPath android.keystore \
             --signingKeyStorePassword "${{ secrets.KEYSTORE_PASSWORD }}" \
             --signingKeyAliasPassword "${{ secrets.KEY_PASSWORD }}" \
+            --jdkPath "$JAVA_HOME_17_X64" \
+            --androidSdkPath "$ANDROID_HOME" \
             --target APK
         working-directory: android
 
@@ -68,7 +72,7 @@ jobs:
             android/app-release-bundle.aab
             android/app-release-signed.apk
 
-      - name: Create GitHub Release dan Lampirkan File
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |

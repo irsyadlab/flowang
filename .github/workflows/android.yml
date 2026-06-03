@@ -9,7 +9,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: Setup JDK 17
@@ -32,29 +32,47 @@ jobs:
       - name: Install Bubblewrap
         run: npm install -g @bubblewrap/cli
 
-      - name: Restore keystore
+      - name: Restore android.keystore
         run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/android.keystore
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android.keystore
         working-directory: android
 
       - name: Restore keystore.json
         run: |
-          echo '${{ secrets.ANDROID_KEYSTORE_JSON }}' > android/keystore.json
+          echo '${{ secrets.ANDROID_KEYSTORE_JSON }}' > keystore.json
         working-directory: android
 
-      - name: Build TWA
-        run: bubblewrap build --skipPwaValidation
+      - name: Build TWA (AAB untuk Play Store)
+        run: |
+          bubblewrap build --skipPwaValidation \
+            --signingKeyPath android.keystore \
+            --signingKeyStorePassword "${{ secrets.KEYSTORE_PASSWORD }}" \
+            --signingKeyAliasPassword "${{ secrets.KEY_PASSWORD }}" \
+            --target AAB
         working-directory: android
 
-      - name: Upload AAB artifact
+      - name: Build TWA (APK untuk Sideload/Testing)
+        run: |
+          bubblewrap build --skipPwaValidation \
+            --signingKeyPath android.keystore \
+            --signingKeyStorePassword "${{ secrets.KEYSTORE_PASSWORD }}" \
+            --signingKeyAliasPassword "${{ secrets.KEY_PASSWORD }}" \
+            --target APK
+        working-directory: android
+
+      - name: Upload Artifacts ke GitHub
         uses: actions/upload-artifact@v4
         with:
-          name: flowang-release-aab
-          path: android/app-release-signed.aab
+          name: flowang-twa-builds
+          path: |
+            android/app-release-bundle.aab
+            android/app-release-signed.apk
 
-      - name: Create GitHub Release
+      - name: Create GitHub Release dan Lampirkan File
         uses: softprops/action-gh-release@v2
         with:
-          files: android/app-release-signed.aab
+          files: |
+            android/app-release-bundle.aab
+            android/app-release-signed.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -40,4 +40,7 @@ android/.gradle/
 android/*.keystore
 android/keystore.json
 android/app-release-signed.aab
+android/app-release-bundle.aab
+android/app-release-signed.apk.idsig
 android/app-release-signed.apk
+android/app-release-unsigned-aligned.apk

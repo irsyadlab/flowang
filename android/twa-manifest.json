@@ -3,7 +3,7 @@
   "host": "flowang.irsyadulibad.my.id",
   "name": "Flowang",
   "launcherName": "Flowang",
-  "display": "fullscreen",
+  "display": "standalone",
   "themeColor": "#1A2035",
   "themeColorDark": "#000000",
   "navigationColor": "#000000",
@@ -20,8 +20,8 @@
     "path": "/home/irsyadulibad/Htdocs/personal/flowang/android/android.keystore",
     "alias": "android"
   },
-  "appVersionName": "1",
-  "appVersionCode": 1,
+  "appVersionName": "3",
+  "appVersionCode": 3,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://flowang.irsyadulibad.my.id/manifest.json",
@@ -43,5 +43,5 @@
   "fileHandlers": [],
   "launchHandlerClientMode": "",
   "displayOverride": [],
-  "appVersion": "1"
+  "appVersion": "3"
 }

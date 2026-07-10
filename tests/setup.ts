@@ -20,3 +20,24 @@ Object.defineProperty(globalThis, "HTMLButtonElement", { value: dom.window.HTMLB
 Object.defineProperty(globalThis, "HTMLDivElement", { value: dom.window.HTMLDivElement, writable: true, configurable: true });
 Object.defineProperty(globalThis, "MutationObserver", { value: dom.window.MutationObserver, writable: true, configurable: true });
 Object.defineProperty(globalThis, "getComputedStyle", { value: (el: Element) => dom.window.getComputedStyle(el), writable: true, configurable: true });
+Object.defineProperty(globalThis, "localStorage", { value: dom.window.localStorage, writable: true, configurable: true });
+Object.defineProperty(globalThis, "sessionStorage", { value: dom.window.sessionStorage, writable: true, configurable: true });
+Object.defineProperty(globalThis, "matchMedia", {
+  value: (query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => false,
+  }),
+  writable: true,
+  configurable: true,
+});
+Object.defineProperty(dom.window, "matchMedia", {
+  value: globalThis.matchMedia,
+  writable: true,
+  configurable: true,
+});

@@ -25,7 +25,7 @@ interface LoanRepaymentActions {
 }
 
 export const useLoanRepaymentStore = create<LoanRepaymentState & LoanRepaymentActions>(
-  (set) => ({
+  (set, get) => ({
     repayments: [],
     isLoading: false,
     error: null,
@@ -107,6 +107,16 @@ export const useLoanRepaymentStore = create<LoanRepaymentState & LoanRepaymentAc
           isLoading: false,
         }));
 
+        // Reload wallets and transactions if a linked transaction was created
+        if (transactionData) {
+          const { useWalletStore } = await import('./walletStore');
+          const { useTransactionStore } = await import('./transactionStore');
+          await Promise.all([
+            useWalletStore.getState().loadWallets(),
+            useTransactionStore.getState().loadTransactions(),
+          ]);
+        }
+
         // If the loan entry was auto-settled, reload entries from DB to reflect updated status
         if (autoSettled) {
           await useLoanEntryStore.getState().loadEntries();
@@ -131,12 +141,23 @@ export const useLoanRepaymentStore = create<LoanRepaymentState & LoanRepaymentAc
         const db = getDB();
         if (!db) throw new Error('Database not initialized');
 
+        const deletedRepayment = get().repayments.find((r) => r.id === id);
         const { autoUnsettled } = await deleteRepaymentWithCascade(db, id, loanEntry);
 
         set((state) => ({
           repayments: state.repayments.filter((r) => r.id !== id),
           isLoading: false,
         }));
+
+        // Reload wallets and transactions if the deleted repayment had a linked transaction
+        if (deletedRepayment?.linkedTransactionId) {
+          const { useWalletStore } = await import('./walletStore');
+          const { useTransactionStore } = await import('./transactionStore');
+          await Promise.all([
+            useWalletStore.getState().loadWallets(),
+            useTransactionStore.getState().loadTransactions(),
+          ]);
+        }
 
         // If the loan entry was auto-unsettled, reload entries from DB to reflect updated status
         if (autoUnsettled) {

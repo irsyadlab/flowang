@@ -484,3 +484,230 @@ export async function deleteRepaymentWithCascade(
     run();
   });
 }
+
+/**
+ * Settle a LoanEntry and create a reversal transaction for the remaining amount.
+ * When settling:
+ *   - lend (piutang) → create income (money comes back)
+ *   - borrow (hutang) → create expense (money goes out)
+ * Only creates a reversal if the entry has a linkedTransactionId and remainingAmount > 0.
+ */
+export async function settleEntryWithReversal(
+  db: IDBDatabase,
+  entry: LoanEntry
+): Promise<void> {
+  if (!entry.linkedTransactionId || entry.remainingAmount <= 0) {
+    // No linked transaction or nothing remaining — just update status in DB
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('loan_entries', 'readwrite');
+      const store = tx.objectStore('loan_entries');
+      const now = localISOString();
+      store.put({
+        ...entry,
+        status: 'settled',
+        settledAt: now,
+        updatedAt: now,
+      });
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(['loan_entries', 'transactions', 'wallets', 'categories'], 'readwrite');
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(new Error('Transaction aborted'));
+
+    const run = async () => {
+      try {
+        const loanEntriesStore = tx.objectStore('loan_entries');
+        const transactionsStore = tx.objectStore('transactions');
+        const walletsStore = tx.objectStore('wallets');
+
+        // Get the original linked transaction to find the walletId
+        const originalTx: Transaction = await new Promise((res, rej) => {
+          const req = transactionsStore.get(entry.linkedTransactionId!);
+          req.onsuccess = () => res(req.result);
+          req.onerror = () => rej(req.error);
+        });
+
+        if (!originalTx) {
+          // Original transaction not found — just update status
+          const now = localISOString();
+          loanEntriesStore.put({
+            ...entry,
+            status: 'settled',
+            settledAt: now,
+            updatedAt: now,
+          });
+          tx.oncomplete = () => resolve();
+          return;
+        }
+
+        // Find "Pelunasan" category
+        const categoriesStore = tx.objectStore('categories');
+        const allCategories: { id: string; name: string }[] = await new Promise((res, rej) => {
+          const req = categoriesStore.getAll();
+          req.onsuccess = () => res(req.result);
+          req.onerror = () => rej(req.error);
+        });
+        const pelunasanCategory = allCategories.find((c) => c.name === 'Pelunasan');
+
+        // Determine reversal type: opposite of original
+        // Original: lend → expense, borrow → income
+        // Reversal: lend → income, borrow → expense
+        const reversalType = entry.direction === 'lend' ? 'income' : 'expense';
+
+        // Create reversal transaction for the remaining amount
+        const now = localISOString();
+        const reversalTx: Transaction = {
+          id: crypto.randomUUID(),
+          type: reversalType,
+          amount: entry.remainingAmount,
+          walletId: originalTx.walletId,
+          categoryId: pelunasanCategory?.id,
+          date: now.split('T')[0],
+          note: `Pelunasan: ${entry.note || (entry.direction === 'lend' ? 'Piutang' : 'Hutang')}`,
+          isLoanLinked: true,
+          createdAt: now,
+          updatedAt: now,
+        };
+        transactionsStore.add(reversalTx);
+
+        // Update wallet balance
+        const delta = reversalType === 'income' ? entry.remainingAmount : -entry.remainingAmount;
+        await new Promise<void>((res, rej) => {
+          const getWalletReq = walletsStore.get(originalTx.walletId);
+          getWalletReq.onsuccess = () => {
+            const wallet = getWalletReq.result;
+            if (wallet) {
+              wallet.balance = (wallet.balance || 0) + delta;
+              wallet.updatedAt = now;
+              walletsStore.put(wallet);
+            }
+            res();
+          };
+          getWalletReq.onerror = () => rej(getWalletReq.error);
+        });
+
+        // Update entry status
+        loanEntriesStore.put({
+          ...entry,
+          status: 'settled',
+          settledAt: now,
+          updatedAt: now,
+          remainingAmount: 0,
+        });
+
+        tx.oncomplete = () => resolve();
+      } catch (err) {
+        try { tx.abort(); } catch { /* already aborted */ }
+        reject(err);
+      }
+    };
+
+    run();
+  });
+}
+
+/**
+ * Unsettle a LoanEntry and delete the reversal transaction created during settlement.
+ * Reverses the wallet balance effect.
+ */
+export async function unsettleEntryWithReversal(
+  db: IDBDatabase,
+  entry: LoanEntry
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(['loan_entries', 'loan_repayments', 'transactions', 'wallets'], 'readwrite');
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(new Error('Transaction aborted'));
+
+    const run = async () => {
+      try {
+        const loanEntriesStore = tx.objectStore('loan_entries');
+        const loanRepaymentsStore = tx.objectStore('loan_repayments');
+        const transactionsStore = tx.objectStore('transactions');
+        const walletsStore = tx.objectStore('wallets');
+
+        // Get the original linked transaction to find the walletId
+        const originalTx: Transaction | undefined = entry.linkedTransactionId
+          ? await new Promise((res, rej) => {
+              const req = transactionsStore.get(entry.linkedTransactionId!);
+              req.onsuccess = () => res(req.result);
+              req.onerror = () => rej(req.error);
+            })
+          : undefined;
+
+        // Calculate remaining amount = entry.amount - sum(repayments)
+        const repayments: Repayment[] = await new Promise((res, rej) => {
+          const index = loanRepaymentsStore.index('by_loanEntryId');
+          const req = index.getAll(entry.id);
+          req.onsuccess = () => res(req.result);
+          req.onerror = () => rej(req.error);
+        });
+        const totalRepaid = repayments.reduce((sum, r) => sum + r.amount, 0);
+        const remainingAmount = entry.amount - totalRepaid;
+
+        if (originalTx && remainingAmount > 0) {
+          // Find and delete the reversal transaction
+          const allTx: Transaction[] = await new Promise((res, rej) => {
+            const req = transactionsStore.getAll();
+            req.onsuccess = () => res(req.result);
+            req.onerror = () => rej(req.error);
+          });
+
+          // Find the reversal: same wallet, isLoanLinked, opposite type of original, amount = remaining
+          const reversalType = entry.direction === 'lend' ? 'income' : 'expense';
+          const reversalTx = allTx.find(
+            (t) =>
+              t.isLoanLinked &&
+              t.walletId === originalTx.walletId &&
+              t.type === reversalType &&
+              t.amount === remainingAmount &&
+              t.id !== entry.linkedTransactionId &&
+              t.note?.startsWith('Pelunasan:')
+          );
+
+          if (reversalTx) {
+            // Reverse wallet balance
+            const delta = reversalTx.type === 'income' ? -reversalTx.amount : reversalTx.amount;
+            await new Promise<void>((res, rej) => {
+              const getWalletReq = walletsStore.get(reversalTx.walletId);
+              getWalletReq.onsuccess = () => {
+                const wallet = getWalletReq.result;
+                if (wallet) {
+                  wallet.balance = (wallet.balance || 0) + delta;
+                  wallet.updatedAt = localISOString();
+                  walletsStore.put(wallet);
+                }
+                res();
+              };
+              getWalletReq.onerror = () => rej(getWalletReq.error);
+            });
+
+            // Delete the reversal transaction
+            transactionsStore.delete(reversalTx.id);
+          }
+        }
+
+        // Update entry status back to active
+        const now = localISOString();
+        loanEntriesStore.put({
+          ...entry,
+          status: 'active',
+          settledAt: undefined,
+          remainingAmount,
+          updatedAt: now,
+        });
+
+        tx.oncomplete = () => resolve();
+      } catch (err) {
+        try { tx.abort(); } catch { /* already aborted */ }
+        reject(err);
+      }
+    };
+
+    run();
+  });
+}

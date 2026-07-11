@@ -22,6 +22,8 @@ const DEFAULT_CATEGORIES: Omit<Category, 'id' | 'createdAt'>[] = [
   { name: 'Freelance', type: 'income', isDefault: true },
   { name: 'Investasi', type: 'income', isDefault: true },
   { name: 'Hadiah', type: 'income', isDefault: true },
+  // Loan categories
+  { name: 'Pelunasan', type: 'both', isDefault: true },
 ];
 
 /**

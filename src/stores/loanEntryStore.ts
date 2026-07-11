@@ -6,7 +6,7 @@ import { useUIStore } from './uiStore';
 import { localISOString } from '../lib/utils';
 import { useSyncStore } from '../sync/syncStore';
 import { onLocalChange } from '../sync/syncManager';
-import { createLoanEntryWithTransaction, deleteLoanEntryWithCascade } from '../lib/transactionIntegrator';
+import { createLoanEntryWithTransaction, deleteLoanEntryWithCascade, settleEntryWithReversal, unsettleEntryWithReversal } from '../lib/transactionIntegrator';
 import { toast } from 'sonner';
 
 interface LoanEntryState {
@@ -89,6 +89,16 @@ export const useLoanEntryStore = create<LoanEntryState & LoanEntryActions>((set,
         entries: [...state.entries, entry],
         isLoading: false,
       }));
+
+      if (data.createTransaction && data.walletId) {
+        const { useWalletStore } = await import('./walletStore');
+        const { useTransactionStore } = await import('./transactionStore');
+        await Promise.all([
+          useWalletStore.getState().loadWallets(),
+          useTransactionStore.getState().loadTransactions(),
+        ]);
+      }
+
       if (useSyncStore.getState().syncKey) {
         onLocalChange('loan_entries', entry);
       }
@@ -139,6 +149,7 @@ export const useLoanEntryStore = create<LoanEntryState & LoanEntryActions>((set,
 
       // Use cascade delete to also remove all related Repayments and Linked_Transactions atomically
       // Requirements: 2.7, 6.3
+      const deletedEntry = get().entries.find((e) => e.id === id);
       await deleteLoanEntryWithCascade(db, id);
       set((state) => ({
         entries: state.entries.filter((e) => e.id !== id),
@@ -149,6 +160,16 @@ export const useLoanEntryStore = create<LoanEntryState & LoanEntryActions>((set,
       // Lazy import to avoid circular dependency (loanRepaymentStore imports loanEntryStore)
       const { useLoanRepaymentStore } = await import('./loanRepaymentStore');
       useLoanRepaymentStore.getState().loadRepayments();
+
+      // Reload wallets and transactions if the deleted entry had a linked transaction
+      if (deletedEntry?.linkedTransactionId) {
+        const { useWalletStore } = await import('./walletStore');
+        const { useTransactionStore } = await import('./transactionStore');
+        await Promise.all([
+          useWalletStore.getState().loadWallets(),
+          useTransactionStore.getState().loadTransactions(),
+        ]);
+      }
 
       if (useSyncStore.getState().syncKey) {
         onLocalChange('loan_entries', { id, _deleted: true });
@@ -166,11 +187,37 @@ export const useLoanEntryStore = create<LoanEntryState & LoanEntryActions>((set,
       const db = getDB();
       if (!db) throw new Error('Database not initialized');
 
-      const updated = await loanEntryDb.toggleEntryStatus(db, id);
+      const entry = get().entries.find((e) => e.id === id);
+      if (!entry) throw new Error('Entry not found');
+
+      if (entry.status === 'active') {
+        // Settle: create reversal transaction for remaining amount
+        await settleEntryWithReversal(db, entry);
+      } else {
+        // Unsettle: delete reversal transaction and restore wallet balance
+        await unsettleEntryWithReversal(db, entry);
+      }
+
+      // Reload entry from DB to get the updated state
+      const { getEntryById } = await import('../db/loanEntryDb');
+      const updated = await getEntryById(db, id);
+      if (!updated) throw new Error('Entry not found after update');
+
       set((state) => ({
         entries: state.entries.map((e) => (e.id === id ? updated : e)),
         isLoading: false,
       }));
+
+      // Reload wallets and transactions if entry has a linked transaction
+      if (entry.linkedTransactionId) {
+        const { useWalletStore } = await import('./walletStore');
+        const { useTransactionStore } = await import('./transactionStore');
+        await Promise.all([
+          useWalletStore.getState().loadWallets(),
+          useTransactionStore.getState().loadTransactions(),
+        ]);
+      }
+
       if (useSyncStore.getState().syncKey) {
         onLocalChange('loan_entries', updated);
       }
@@ -187,19 +234,32 @@ export const useLoanEntryStore = create<LoanEntryState & LoanEntryActions>((set,
       const db = getDB();
       if (!db) throw new Error('Database not initialized');
 
-      await loanEntryDb.markAllSettled(db, contactId);
-      const now = localISOString();
-      set((state) => ({
-        entries: state.entries.map((e) =>
-          e.contactId === contactId && e.status === 'active'
-            ? { ...e, status: 'settled' as const, settledAt: now, updatedAt: now }
-            : e
-        ),
-        isLoading: false,
-      }));
+      const activeEntries = get().entries.filter(
+        (e) => e.contactId === contactId && e.status === 'active'
+      );
+
+      // Settle each entry with reversal transaction
+      for (const entry of activeEntries) {
+        await settleEntryWithReversal(db, entry);
+      }
+
+      // Reload entries from DB
+      const allEntries = await loanEntryDb.getAllEntries(db);
+      set({ entries: allEntries, isLoading: false });
+
+      // Reload wallets and transactions if any entry had a linked transaction
+      const hasLinkedEntries = activeEntries.some((e) => e.linkedTransactionId);
+      if (hasLinkedEntries) {
+        const { useWalletStore } = await import('./walletStore');
+        const { useTransactionStore } = await import('./transactionStore');
+        await Promise.all([
+          useWalletStore.getState().loadWallets(),
+          useTransactionStore.getState().loadTransactions(),
+        ]);
+      }
+
       if (useSyncStore.getState().syncKey) {
-        // Broadcast each settled entry individually
-        const settled = get().entries.filter(
+        const settled = allEntries.filter(
           (e) => e.contactId === contactId && e.status === 'settled'
         );
         for (const e of settled) {

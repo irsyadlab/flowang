@@ -15,6 +15,7 @@ const EXPECTED_DEFAULTS = [
   { name: "Freelance", type: "income" },
   { name: "Investasi", type: "income" },
   { name: "Hadiah", type: "income" },
+  { name: "Pelunasan", type: "both" },
 ];
 
 describe("Default Categories", () => {
@@ -31,10 +32,10 @@ describe("Default Categories", () => {
     closeDB();
   });
 
-  it("exactly 9 default categories are seeded with correct names and types", async () => {
+  it("exactly 10 default categories are seeded with correct names and types", async () => {
     const categories = await getAllCategories(db);
 
-    expect(categories.length).toBe(9);
+    expect(categories.length).toBe(10);
 
     for (const expected of EXPECTED_DEFAULTS) {
       const found = categories.find(

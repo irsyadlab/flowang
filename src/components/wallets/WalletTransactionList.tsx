@@ -1,8 +1,10 @@
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTransactionStore } from "@/stores/transactionStore";
 import TransactionItem from "@/components/transactions/TransactionItem";
 import EmptyState from "@/components/shared/EmptyState";
 import LoadingSpinner from "@/components/shared/LoadingSpinner";
+import VirtualList from "@/components/shared/VirtualList";
 import { ArrowLeftRight } from "lucide-react";
 
 interface WalletTransactionListProps {
@@ -14,9 +16,16 @@ export default function WalletTransactionList({ walletId }: WalletTransactionLis
   const transactions = useTransactionStore((s) => s.transactions);
   const isLoading = useTransactionStore((s) => s.isLoading);
 
-  const filtered = transactions
-    .filter((t) => t.walletId === walletId || t.toWalletId === walletId)
-    .sort((a, b) => b.date.localeCompare(a.date));
+  // Daftar ini tidak dibatasi periode apa pun — isinya seluruh riwayat wallet.
+  // Filter + sort di-memo supaya tidak diulang di setiap render; sebelumnya
+  // keduanya berjalan langsung di badan render.
+  const filtered = useMemo(
+    () =>
+      transactions
+        .filter((t) => t.walletId === walletId || t.toWalletId === walletId)
+        .sort((a, b) => b.date.localeCompare(a.date)),
+    [transactions, walletId],
+  );
 
   if (isLoading) {
     return <LoadingSpinner />;
@@ -35,10 +44,17 @@ export default function WalletTransactionList({ walletId }: WalletTransactionLis
   return (
     <div className="space-y-2">
       <p className="text-xs font-medium text-muted-foreground">{filtered.length} transaksi</p>
-      <div className="flex flex-col gap-2 stagger-children">
-        {filtered.map((t) => (
+
+      {/* `stagger-children` hanya dipakai saat daftar dirender biasa. Pada mode
+          tervirtualisasi baris di-mount ulang tiap kali masuk layar, jadi
+          animasi masuknya akan terpicu berulang selama scroll. */}
+      <VirtualList
+        items={filtered}
+        getKey={(t) => t.id}
+        plainClassName="flex flex-col gap-2 stagger-children"
+      >
+        {(t) => (
           <div
-            key={t.id}
             role="button"
             tabIndex={0}
             onClick={() => navigate(`/transactions/${t.id}`)}
@@ -52,8 +68,8 @@ export default function WalletTransactionList({ walletId }: WalletTransactionLis
           >
             <TransactionItem transaction={t} />
           </div>
-        ))}
-      </div>
+        )}
+      </VirtualList>
     </div>
   );
 }

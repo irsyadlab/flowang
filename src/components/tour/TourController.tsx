@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Joyride, type EventData, STATUS, ACTIONS, EVENTS } from 'react-joyride';
+import { useShallow } from 'zustand/react/shallow';
 import { useTourStore } from '@/stores/tourStore';
 import { shouldAutoStart } from '@/lib/tourStorage';
 import { TOUR_STEPS } from '@/lib/tourSteps';
@@ -54,7 +55,18 @@ export default function TourController() {
     completeTour,
     skipTour,
     markAutoStarted,
-  } = useTourStore();
+  } = useTourStore(
+    useShallow((s) => ({
+      run: s.run,
+      stepIndex: s.stepIndex,
+      hasAutoStarted: s.hasAutoStarted,
+      startTour: s.startTour,
+      setStepIndex: s.setStepIndex,
+      completeTour: s.completeTour,
+      skipTour: s.skipTour,
+      markAutoStarted: s.markAutoStarted,
+    })),
+  );
 
   const previousFocusRef = useRef<HTMLElement | null>(null);
 

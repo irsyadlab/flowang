@@ -22,7 +22,8 @@ function shiftDay(ymd: string, delta: number): string {
 }
 
 export default function TransactionFilter() {
-  const { filter, setFilter } = useTransactionStore();
+  const filter = useTransactionStore((s) => s.filter);
+  const setFilter = useTransactionStore((s) => s.setFilter);
   const wallets = useWalletStore((s) => s.wallets);
   const categories = useCategoryStore((s) => s.categories);
   const [filterOpen, setFilterOpen] = useState(false);

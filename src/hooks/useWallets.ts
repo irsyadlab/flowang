@@ -1,3 +1,4 @@
+import { useShallow } from 'zustand/react/shallow';
 import { useWalletStore } from '../stores/walletStore';
 
 export function useWallets() {
@@ -10,7 +11,18 @@ export function useWallets() {
     updateWallet,
     deleteWallet,
     recalculateBalance,
-  } = useWalletStore();
+  } = useWalletStore(
+    useShallow((s) => ({
+      wallets: s.wallets,
+      isLoading: s.isLoading,
+      error: s.error,
+      loadWallets: s.loadWallets,
+      addWallet: s.addWallet,
+      updateWallet: s.updateWallet,
+      deleteWallet: s.deleteWallet,
+      recalculateBalance: s.recalculateBalance,
+    })),
+  );
 
   return {
     // Data

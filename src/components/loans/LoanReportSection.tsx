@@ -24,7 +24,7 @@ export default function LoanReportSection({
   repayments,
   onNavigateToContact,
 }: LoanReportSectionProps) {
-  const { contacts } = useLoanContactStore();
+  const contacts = useLoanContactStore((s) => s.contacts);
 
   // Only consider active entries
   const activeEntries = useMemo(

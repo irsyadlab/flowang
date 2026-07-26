@@ -11,7 +11,7 @@ export default function NewLoanPage() {
   const navigate = useNavigate();
   const { contactId } = useParams<{ contactId: string }>();
   useLoanContacts();
-  const { addEntry } = useLoanEntryStore();
+  const addEntry = useLoanEntryStore((s) => s.addEntry);
 
   const handleSubmit = async (data: LoanEntryFormData) => {
     await addEntry(data);

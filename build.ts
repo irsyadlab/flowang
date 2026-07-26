@@ -231,6 +231,10 @@ const result = await build({
   minify: true,
   target: "browser",
   sourcemap: "linked",
+  // Route di-code-split lewat dynamic import (lihat src/routes/index.tsx).
+  // Tanpa splitting, semua dynamic import ditarik balik ke satu bundle dan
+  // pemecahannya jadi tidak berefek apa pun.
+  splitting: true,
   define: {
     "process.env.NODE_ENV": JSON.stringify("production"),
     ...envDefines,
@@ -273,9 +277,62 @@ console.log(
   `🔑 env.js generated with ${Object.keys(envObj).length} variable(s)`,
 );
 
-// Inject <script src="/env.js"> into dist/index.html before the app bundle
 const htmlPath = path.join(outdir, "index.html");
 let html = await Bun.file(htmlPath).text();
+
+// Koreksi src entry di index.html.
+//
+// Bug Bun (tercek di 1.3.14): dengan `splitting: true`, Bun menulis src chunk
+// yang SALAH ke index.html — sebuah chunk bersama, bukan entry aplikasi —
+// padahal `result.outputs` melaporkan entry-point yang benar. Akibatnya bundle
+// produksi memuat modul acak, React tidak pernah mount, dan yang terlihat user
+// hanyalah splash screen yang menggantung selamanya.
+//
+// Perbaikannya memakai metadata Bun sendiri sebagai sumber kebenaran. Kalau
+// suatu saat bug-nya diperbaiki, blok ini jadi no-op (src sudah benar).
+const jsEntry = result.outputs.find(
+  (o) => o.kind === "entry-point" && o.path.endsWith(".js"),
+);
+if (jsEntry) {
+  const entryName = path.basename(jsEntry.path);
+  const currentSrc = html.match(
+    /<script type="module"[^>]*src="\.\/([^"]+\.js)"/,
+  )?.[1];
+
+  if (currentSrc && currentSrc !== entryName) {
+    html = html.replace(
+      /(<script type="module"[^>]*src=")\.\/[^"]+\.js(")/,
+      `$1./${entryName}$2`,
+    );
+    console.log(
+      `\n🔧 index.html entry dikoreksi: ${currentSrc} → ${entryName}`,
+    );
+  }
+} else {
+  console.warn(
+    "\n⚠️  Tidak menemukan entry-point JS di output build — index.html tidak dikoreksi",
+  );
+}
+
+// Jadikan seluruh path aset di index.html absolut terhadap root.
+//
+// Bun meng-emit path relatif (`./chunk-abc.js`). Untuk SPA dengan fallback ke
+// index.html, itu rusak pada setiap route yang lebih dari satu level: membuka
+// `/wallets/new` membuat browser me-resolve `./chunk-abc.js` menjadi
+// `/wallets/chunk-abc.js`, fallback mengembalikan index.html, dan module script
+// gagal di-parse — React tidak pernah mount dan user melihat splash kosong.
+//
+// Hanya terlihat lewat hard refresh, bookmark, atau tautan langsung; navigasi
+// di dalam SPA tidak pernah memuat ulang dokumen, jadi selama ini tak kentara.
+const relativeAssetRefs = html.match(/(?:src|href)="\.\/[^"]+"/g) ?? [];
+if (relativeAssetRefs.length > 0) {
+  html = html.replace(/((?:src|href)=")\.\//g, "$1/");
+  console.log(
+    `🔗 ${relativeAssetRefs.length} path aset di index.html dijadikan absolut`,
+  );
+}
+
+// Inject <script src="/env.js"> into dist/index.html before the app bundle
 html = html.replace(
   '<script type="module"',
   '<script src="/env.js"></script>\n  <script type="module"',
@@ -284,14 +341,16 @@ await Bun.write(htmlPath, html);
 const { readFile, writeFile } = await import("fs/promises");
 const distHtml = await readFile(path.join(outdir, "index.html"), "utf-8");
 
-// Extract hashed paths for both icon sizes
-const icon192Match = distHtml.match(/href="\.\/([^"]*icon-192[^"]*\.png)"/);
-const icon512Match = distHtml.match(/href="\.\/([^"]*icon-512[^"]*\.png)"/);
+// Extract hashed paths for both icon sizes.
+// Path di index.html sudah dijadikan absolut di atas, jadi pola `./` tidak lagi
+// dipakai — `\/?` mempertahankan kecocokan untuk kedua bentuk.
+const icon192Match = distHtml.match(/href="\.?\/([^"]*icon-192[^"]*\.png)"/);
+const icon512Match = distHtml.match(/href="\.?\/([^"]*icon-512[^"]*\.png)"/);
 const icon192MaskableMatch = distHtml.match(
-  /href="\.\/([^"]*icon-192-maskable[^"]*\.png)"/,
+  /href="\.?\/([^"]*icon-192-maskable[^"]*\.png)"/,
 );
 const icon512MaskableMatch = distHtml.match(
-  /href="\.\/([^"]*icon-512-maskable[^"]*\.png)"/,
+  /href="\.?\/([^"]*icon-512-maskable[^"]*\.png)"/,
 );
 
 const manifestPath = path.join(outdir, "manifest.json");
@@ -347,8 +406,28 @@ if (existsSync(swPath)) {
     /const PRECACHE_URLS = \[[\s\S]*?\];/,
     `const PRECACHE_URLS = ${JSON.stringify(precacheUrls, null, 2)};`,
   );
+
+  // Cache name harus berubah setiap kali isi build berubah.
+  //
+  // Strategi asset adalah cache-first dengan nama file ber-hash, dan handler
+  // `activate` hanya menghapus cache yang namanya != CACHE_NAME. Dengan nama
+  // yang tetap, kondisi itu tidak pernah terpenuhi sehingga chunk dari deploy
+  // lama menumpuk selamanya di perangkat user. Sejak route di-split jumlah
+  // chunk per deploy jauh lebih banyak, jadi ini bukan lagi masalah sepele.
+  //
+  // Hash diturunkan dari daftar URL ber-hash itu sendiri: berubah kalau dan
+  // hanya kalau ada output yang berubah, jadi rebuild tanpa perubahan tidak
+  // membuang cache user secara sia-sia.
+  const buildHash = Bun.hash(precacheUrls.join("\n")).toString(36).slice(0, 10);
+  swContent = swContent.replace(
+    /const CACHE_NAME = '[^']*';/,
+    `const CACHE_NAME = 'flowang-${buildHash}';`,
+  );
+
   await writeFile(swPath, swContent);
-  console.log(`📦 sw.js updated with ${precacheUrls.length} pre-cached URLs`);
+  console.log(
+    `📦 sw.js updated with ${precacheUrls.length} pre-cached URLs (cache: flowang-${buildHash})`,
+  );
 }
 
 const buildTime = (end - start).toFixed(2);

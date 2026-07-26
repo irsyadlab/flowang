@@ -13,17 +13,86 @@ import * as walletDb from '../db/walletDb';
 import * as categoryDb from '../db/categoryDb';
 import * as loanContactDb from '../db/loanContactDb';
 import * as loanEntryDb from '../db/loanEntryDb';
-import type { Wallet, Transaction, Category, LoanContact, LoanEntry } from '../types';
+import * as loanRepaymentDb from '../db/loanRepaymentDb';
+import * as transactionDb from '../db/transactionDb';
+import { SYNCED_STORES, syncedStoreNames, type SyncedStoreName } from './syncedStores';
+import { sumWalletDeltas, resolveBalance } from '../lib/walletBalance';
+import { createSerialQueue } from '../lib/serialQueue';
+import type * as Y from 'yjs';
+import type { Wallet, Transaction, Category, LoanContact, LoanEntry, Repayment } from '../types';
 
+/**
+ * Bentuk record apa pun yang dibaca dari sebuah Yjs map. Index signature-nya
+ * dipakai untuk mengecek `_deleted` pada nilai remote yang belum di-narrow.
+ */
 interface SyncEntity {
   id: string;
   _deleted?: boolean;
   [key: string]: unknown;
 }
 
+/** Tombstone: penanda bahwa sebuah record dihapus di device asal. */
+interface SyncTombstone {
+  id: string;
+  _deleted: true;
+}
+
+/**
+ * Payload yang boleh di-publish ke Yjs.
+ *
+ * Sengaja berupa union tipe domain, bukan `SyncEntity`. Interface TypeScript
+ * tidak punya implicit index signature, jadi `SyncEntity` justru menolak
+ * `Wallet`/`LoanEntry`/dst. dan memaksa caller melakukan cast.
+ */
+export type SyncPayload =
+  | Wallet
+  | Transaction
+  | Category
+  | LoanContact
+  | LoanEntry
+  | Repayment
+  | SyncTombstone;
+
 let initialized = false;
 // Track active Yjs observers so we can clean them up on reconnect
 let activeObservers: (() => void)[] = [];
+
+/**
+ * Antrian serial untuk semua penerapan perubahan remote.
+ *
+ * Handler observer bersifat async (IndexedDB + reload store), sementara Yjs
+ * memanggilnya secara sinkron dan bisa beruntun. Tanpa antrian, dua handler
+ * saling menyalip: yang satu sedang menghitung ulang saldo dari snapshot
+ * transaksi, yang lain di tengah jalan sudah menulis transaksi baru — hasilnya
+ * saldo dihitung dari state setengah jadi.
+ *
+ * Antrian ini sengaja dipakai bersama LINTAS map, bukan satu antrian per map:
+ * saldo wallet bergantung pada isi store transaksi, jadi handler wallet dan
+ * handler transaksi pun tidak boleh tumpang tindih.
+ */
+const syncQueue = createSerialQueue((error) => {
+  // Satu perubahan yang gagal tidak boleh mematikan antrian untuk selamanya
+  console.error('[Flowang] Gagal menerapkan perubahan sync:', error);
+});
+
+function enqueue(task: () => Promise<void>): void {
+  syncQueue.enqueue(task);
+}
+
+/**
+ * Resolve setelah semua perubahan yang sudah masuk antrian selesai diterapkan.
+ *
+ * Dipakai test (dan berguna untuk diagnosis) karena penerapan perubahan remote
+ * berlangsung asinkron di luar jalur pemanggilan Yjs.
+ */
+export function whenSyncSettled(): Promise<void> {
+  return syncQueue.settled();
+}
+
+/** Kunci yang berubah pada sebuah event Yjs map. */
+function changedKeys(event: Y.YMapEvent<unknown>): string[] {
+  return Array.from(event.changes.keys.keys());
+}
 
 export async function initialize(): Promise<void> {
   if (initialized) return;
@@ -82,97 +151,97 @@ function _attachObservers(): void {
   const categoriesMap = ydoc.getMap<Category | { id: string; _deleted: true }>('categories');
   const loanContactsMap = ydoc.getMap<LoanContact | { id: string; _deleted: true }>('loan_contacts');
   const loanEntriesMap = ydoc.getMap<LoanEntry | { id: string; _deleted: true }>('loan_entries');
+  const loanRepaymentsMap = ydoc.getMap<Repayment | { id: string; _deleted: true }>('loan_repayments');
 
-  const handleWalletsChange = async () => {
+  /**
+   * Nilai sebuah kunci pada map, atau `undefined` bila kunci itu sudah tidak
+   * ada / bertanda tombstone. Penghapusan di aplikasi ini dilakukan dengan
+   * menulis `{ _deleted: true }`, tapi `map.delete()` dari Yjs pun ditangani.
+   */
+  function liveValue<T>(map: Y.Map<T | { id: string; _deleted: true }>, key: string): T | undefined {
+    const value = map.get(key);
+    if (value === undefined) return undefined;
+    if ((value as SyncEntity)._deleted) return undefined;
+    return value as T;
+  }
+
+  const handleWalletsChange = async (keys: string[]) => {
     const db = getDB();
     if (!db) return;
 
-    const entries = Array.from(walletsMap.values());
-    for (const entry of entries) {
-      if ((entry as SyncEntity)._deleted) {
-        await walletDb.deleteWallet(db, entry.id).catch(() => {});
-      } else {
-        const incoming = entry as Wallet;
-        // `balance` is a derived value (initialBalance + sum of transactions).
-        // Never overwrite it with the remote snapshot — the remote device may
-        // have a different transaction history at the time it wrote to Yjs.
-        // Instead, preserve the local balance if the wallet already exists, or
-        // use initialBalance for a brand-new wallet (transactions haven't
-        // arrived yet; handleTransactionsChange will recalculate after they do).
-        const existing = await walletDb.getWalletById(db, incoming.id).catch(() => undefined);
-        const walletToSave: Wallet = {
+    for (const key of keys) {
+      const incoming = liveValue(walletsMap, key);
+      if (!incoming) {
+        await walletDb.deleteWallet(db, key).catch(() => {});
+        continue;
+      }
+
+      // `balance` adalah nilai turunan (initialBalance + jumlah transaksi).
+      // Jangan pernah menimpanya dengan snapshot remote — device asal bisa punya
+      // riwayat transaksi yang berbeda saat menulis ke Yjs. Pertahankan saldo
+      // lokal bila wallet-nya sudah ada, atau pakai initialBalance untuk wallet
+      // yang benar-benar baru (transaksinya belum tiba; handleTransactionsChange
+      // akan menghitung ulang setelah masuk).
+      const existing = await walletDb.getWalletById(db, incoming.id).catch(() => undefined);
+      await walletDb
+        .updateWallet(db, {
           ...incoming,
           balance: existing ? existing.balance : incoming.initialBalance,
-        };
-        await walletDb.updateWallet(db, walletToSave).catch(() => {});
-      }
+        })
+        .catch(() => {});
     }
 
-    // Reload store so UI reflects remote changes
     const { useWalletStore } = await import('../stores/walletStore');
     await useWalletStore.getState().loadWallets();
   };
 
-  const handleTransactionsChange = async () => {
+  const handleTransactionsChange = async (keys: string[]) => {
     const db = getDB();
     if (!db) return;
 
-    // Track which wallets are affected so we can recalculate their balances
     const affectedWalletIds = new Set<string>();
+    const noteAffected = (t: Transaction | undefined) => {
+      if (!t) return;
+      if (t.walletId) affectedWalletIds.add(t.walletId);
+      if (t.toWalletId) affectedWalletIds.add(t.toWalletId);
+    };
 
-    const entries = Array.from(transactionsMap.values());
-    for (const entry of entries) {
-      if ((entry as SyncEntity)._deleted) {
-        const tx = db.transaction('transactions', 'readwrite');
-        tx.objectStore('transactions').delete(entry.id);
-        await new Promise<void>((res, rej) => {
-          tx.oncomplete = () => res();
-          tx.onerror = () => rej(tx.error);
-        }).catch(() => {});
-      } else {
-        const incoming = entry as Transaction;
-        if (incoming.walletId) affectedWalletIds.add(incoming.walletId);
-        if (incoming.toWalletId) affectedWalletIds.add(incoming.toWalletId);
+    for (const key of keys) {
+      // Baca record lokal SEBELUM menulis/menghapus. Transaksi yang dihapus —
+      // dan wallet lama pada transaksi yang dipindahkan antar-wallet — tetap
+      // memengaruhi saldo, dan setelah operasi ini informasinya sudah hilang.
+      noteAffected(await transactionDb.getTransactionById(db, key).catch(() => undefined));
 
-        const tx = db.transaction('transactions', 'readwrite');
-        tx.objectStore('transactions').put(incoming);
-        await new Promise<void>((res, rej) => {
-          tx.oncomplete = () => res();
-          tx.onerror = () => rej(tx.error);
-        }).catch(() => {});
+      const incoming = liveValue(transactionsMap, key);
+      if (!incoming) {
+        await transactionDb.deleteTransactionRecord(db, key).catch(() => {});
+        continue;
       }
+
+      noteAffected(incoming);
+      await transactionDb.putTransactionRecord(db, incoming).catch(() => {});
     }
 
-    // Recalculate balance for every affected wallet from the full transaction
-    // history. This is safe because initialBalance is never mutated after wallet
-    // creation — balance corrections only create adjustment transactions, so
-    // balance = initialBalance + sum(all_txs) is always consistent.
+    // Hitung ulang saldo wallet terdampak dari keseluruhan riwayat transaksi.
+    // Aman karena initialBalance tidak pernah diubah setelah wallet dibuat —
+    // koreksi saldo selalu berupa transaksi adjustment.
     if (affectedWalletIds.size > 0) {
-      const { getAllTransactions } = await import('../db/transactionDb');
-      const allTxs = await getAllTransactions(db);
+      const allTxs = await transactionDb.getAllTransactions(db);
+      const deltas = sumWalletDeltas(allTxs);
 
       for (const walletId of Array.from(affectedWalletIds)) {
         const wallet = await walletDb.getWalletById(db, walletId).catch(() => undefined);
         if (!wallet) continue;
 
-        let delta = 0;
-        for (const t of allTxs) {
-          if (t.walletId === walletId) {
-            if (t.type === 'income' || t.type === 'adjustment_increase') delta += t.amount;
-            else if (t.type === 'expense' || t.type === 'adjustment_decrease') delta -= t.amount;
-            else if (t.type === 'transfer') delta -= t.amount;
-          }
-          if (t.toWalletId === walletId && t.type === 'transfer') delta += t.amount;
-        }
-
-        await walletDb.updateWallet(db, {
-          ...wallet,
-          balance: wallet.initialBalance + delta,
-        }).catch(() => {});
+        await walletDb
+          .updateWallet(db, {
+            ...wallet,
+            balance: resolveBalance(wallet.initialBalance, deltas.get(walletId)),
+          })
+          .catch(() => {});
       }
     }
 
-    // Reload stores so UI reflects remote changes
     const { useTransactionStore } = await import('../stores/transactionStore');
     const { useWalletStore } = await import('../stores/walletStore');
     await Promise.all([
@@ -181,34 +250,33 @@ function _attachObservers(): void {
     ]);
   };
 
-  const handleCategoriesChange = async () => {
+  const handleCategoriesChange = async (keys: string[]) => {
     const db = getDB();
     if (!db) return;
 
-    const entries = Array.from(categoriesMap.values());
-    for (const entry of entries) {
-      if ((entry as SyncEntity)._deleted) {
-        await categoryDb.deleteCategory(db, entry.id).catch(() => {});
+    for (const key of keys) {
+      const incoming = liveValue(categoriesMap, key);
+      if (!incoming) {
+        await categoryDb.deleteCategory(db, key).catch(() => {});
       } else {
-        await categoryDb.updateCategory(db, entry as Category).catch(() => {});
+        await categoryDb.updateCategory(db, incoming).catch(() => {});
       }
     }
 
-    // Reload store so UI reflects remote changes
     const { useCategoryStore } = await import('../stores/categoryStore');
     await useCategoryStore.getState().loadCategories();
   };
 
-  const handleLoanContactsChange = async () => {
+  const handleLoanContactsChange = async (keys: string[]) => {
     const db = getDB();
     if (!db) return;
 
-    const entries = Array.from(loanContactsMap.values());
-    for (const entry of entries) {
-      if ((entry as SyncEntity)._deleted) {
-        await loanContactDb.deleteContact(db, entry.id).catch(() => {});
+    for (const key of keys) {
+      const incoming = liveValue(loanContactsMap, key);
+      if (!incoming) {
+        await loanContactDb.deleteContact(db, key).catch(() => {});
       } else {
-        await loanContactDb.updateContact(db, entry.id, entry as LoanContact).catch(() => {});
+        await loanContactDb.updateContact(db, key, incoming).catch(() => {});
       }
     }
 
@@ -216,16 +284,16 @@ function _attachObservers(): void {
     await useLoanContactStore.getState().loadContacts();
   };
 
-  const handleLoanEntriesChange = async () => {
+  const handleLoanEntriesChange = async (keys: string[]) => {
     const db = getDB();
     if (!db) return;
 
-    const entries = Array.from(loanEntriesMap.values());
-    for (const entry of entries) {
-      if ((entry as SyncEntity)._deleted) {
-        await loanEntryDb.deleteEntry(db, entry.id).catch(() => {});
+    for (const key of keys) {
+      const incoming = liveValue(loanEntriesMap, key);
+      if (!incoming) {
+        await loanEntryDb.deleteEntry(db, key).catch(() => {});
       } else {
-        await loanEntryDb.updateEntry(db, entry.id, entry as LoanEntry).catch(() => {});
+        await loanEntryDb.updateEntry(db, key, incoming).catch(() => {});
       }
     }
 
@@ -233,24 +301,73 @@ function _attachObservers(): void {
     await useLoanEntryStore.getState().loadEntries();
   };
 
-  walletsMap.observe(handleWalletsChange);
-  transactionsMap.observe(handleTransactionsChange);
-  categoriesMap.observe(handleCategoriesChange);
-  loanContactsMap.observe(handleLoanContactsChange);
-  loanEntriesMap.observe(handleLoanEntriesChange);
+  const handleLoanRepaymentsChange = async (keys: string[]) => {
+    const db = getDB();
+    if (!db) return;
 
-  activeObservers.push(
-    () => walletsMap.unobserve(handleWalletsChange),
-    () => transactionsMap.unobserve(handleTransactionsChange),
-    () => categoriesMap.unobserve(handleCategoriesChange),
-    () => loanContactsMap.unobserve(handleLoanContactsChange),
-    () => loanEntriesMap.unobserve(handleLoanEntriesChange),
-  );
+    for (const key of keys) {
+      const incoming = liveValue(loanRepaymentsMap, key);
+      if (!incoming) {
+        await loanRepaymentDb.deleteRepayment(db, key).catch(() => {});
+      } else {
+        // `remainingAmount` / `status` loan entry TIDAK dihitung ulang di sini —
+        // nilainya ikut ter-sync lewat map `loan_entries` yang di-publish
+        // bersamaan oleh device asal, jadi map itulah yang otoritatif.
+        await loanRepaymentDb.putRepayment(db, incoming).catch(() => {});
+      }
+    }
+
+    const { useLoanRepaymentStore } = await import('../stores/loanRepaymentStore');
+    await useLoanRepaymentStore.getState().loadRepayments();
+  };
+
+  /**
+   * Pasang observer untuk sebuah map.
+   *
+   * Handler hanya menerima kunci yang BERUBAH. Versi sebelumnya memindai ulang
+   * seluruh map dan menulis ulang semua record ke IndexedDB pada setiap event,
+   * sehingga satu transaksi dari device lain memicu N operasi tulis.
+   */
+  function bind<T>(
+    map: Y.Map<T | { id: string; _deleted: true }>,
+    handler: (keys: string[]) => Promise<void>,
+  ): void {
+    const observer = (event: Y.YMapEvent<T | { id: string; _deleted: true }>) => {
+      const keys = changedKeys(event);
+      if (keys.length === 0) return;
+      enqueue(() => handler(keys));
+    };
+    map.observe(observer);
+    activeObservers.push(() => map.unobserve(observer));
+  }
+
+  bind(walletsMap, handleWalletsChange);
+  bind(transactionsMap, handleTransactionsChange);
+  bind(categoriesMap, handleCategoriesChange);
+  bind(loanContactsMap, handleLoanContactsChange);
+  bind(loanEntriesMap, handleLoanEntriesChange);
+  bind(loanRepaymentsMap, handleLoanRepaymentsChange);
+
+  // Rekonsiliasi awal: `connect()` selalu membuat Y.Doc baru yang kosong, jadi
+  // seluruh state (dari IndexedDB lokal maupun peer) tiba lewat event dan sudah
+  // tercakup delta di atas. Sapuan sekali ini hanya jaring pengaman bila
+  // observer dipasang pada doc yang sudah terisi — pada doc kosong biayanya nol.
+  const pending: Array<[string[], (keys: string[]) => Promise<void>]> = [
+    [Array.from(walletsMap.keys()), handleWalletsChange],
+    [Array.from(transactionsMap.keys()), handleTransactionsChange],
+    [Array.from(categoriesMap.keys()), handleCategoriesChange],
+    [Array.from(loanContactsMap.keys()), handleLoanContactsChange],
+    [Array.from(loanEntriesMap.keys()), handleLoanEntriesChange],
+    [Array.from(loanRepaymentsMap.keys()), handleLoanRepaymentsChange],
+  ];
+  for (const [keys, handler] of pending) {
+    if (keys.length > 0) enqueue(() => handler(keys));
+  }
 }
 
 export function onLocalChange(
-  entityType: 'wallets' | 'transactions' | 'categories' | 'loan_contacts' | 'loan_entries',
-  entity: SyncEntity
+  entityType: SyncedStoreName,
+  entity: SyncPayload
 ): void {
   const ydoc = webrtcProvider.getYDoc();
   if (!ydoc) return;
@@ -278,12 +395,10 @@ export async function clearAllLocalData(): Promise<void> {
   const db = getDB();
   if (db) {
     await new Promise<void>((resolve, reject) => {
-      const tx = db.transaction(['wallets', 'transactions', 'categories', 'loan_contacts', 'loan_entries'], 'readwrite');
-      tx.objectStore('wallets').clear();
-      tx.objectStore('transactions').clear();
-      tx.objectStore('categories').clear();
-      tx.objectStore('loan_contacts').clear();
-      tx.objectStore('loan_entries').clear();
+      const tx = db.transaction(syncedStoreNames(), 'readwrite');
+      for (const storeName of SYNCED_STORES) {
+        tx.objectStore(storeName).clear();
+      }
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
     });
@@ -299,12 +414,13 @@ export async function clearAllLocalData(): Promise<void> {
   });
 
   // Reload stores so UI reflects the empty state
-  const [{ useWalletStore }, { useTransactionStore }, { useCategoryStore }, { useLoanContactStore }, { useLoanEntryStore }] = await Promise.all([
+  const [{ useWalletStore }, { useTransactionStore }, { useCategoryStore }, { useLoanContactStore }, { useLoanEntryStore }, { useLoanRepaymentStore }] = await Promise.all([
     import('../stores/walletStore'),
     import('../stores/transactionStore'),
     import('../stores/categoryStore'),
     import('../stores/loanContactStore'),
     import('../stores/loanEntryStore'),
+    import('../stores/loanRepaymentStore'),
   ]);
   await Promise.all([
     useWalletStore.getState().loadWallets(),
@@ -312,6 +428,7 @@ export async function clearAllLocalData(): Promise<void> {
     useCategoryStore.getState().loadCategories(),
     useLoanContactStore.getState().loadContacts(),
     useLoanEntryStore.getState().loadEntries(),
+    useLoanRepaymentStore.getState().loadRepayments(),
   ]);
 }
 

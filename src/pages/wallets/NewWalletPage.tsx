@@ -28,7 +28,8 @@ const WALLET_GRADIENTS = [
 export default function NewWalletPage() {
   const stickyHeader = useStickyHeader();
   const navigate = useNavigate();
-  const { addWallet, wallets } = useWalletStore();
+  const addWallet = useWalletStore((s) => s.addWallet);
+  const wallets = useWalletStore((s) => s.wallets);
 
   const form = useForm<WalletInput>({
     resolver: zodResolver(walletSchema),

@@ -10,7 +10,7 @@ import { useStickyHeader } from "@/hooks/useStickyHeader";
 export default function TransactionsPage() {
   const stickyHeader = useStickyHeader();
   const navigate = useNavigate();
-  const { setFilter } = useTransactionStore();
+  const setFilter = useTransactionStore((s) => s.setFilter);
 
   // Restore last selected date from sessionStorage, fallback to today
   useEffect(() => {

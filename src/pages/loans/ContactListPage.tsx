@@ -12,7 +12,7 @@ export default function ContactListPage() {
   const stickyHeader = useStickyHeader();
   const navigate = useNavigate();
   const { contacts, summaries } = useLoanContacts();
-  const { entries } = useLoanEntryStore();
+  const entries = useLoanEntryStore((s) => s.entries);
 
   const activeCount = countContactsWithActiveLoans(
     contacts,

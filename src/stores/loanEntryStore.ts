@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { LoanEntry, LoanEntryFormData, LinkedTransactionInput } from '../types';
+import type { LoanEntry, LoanEntryFormData, LinkedTransactionInput, Transaction } from '../types';
 import * as loanEntryDb from '../db/loanEntryDb';
 import { getDB } from '../db/db';
 import { useUIStore } from './uiStore';
@@ -69,6 +69,11 @@ export const useLoanEntryStore = create<LoanEntryState & LoanEntryActions>((set,
         updatedAt: now,
       };
 
+      // Entry yang benar-benar tersimpan. Saat integrator dipakai, dialah yang
+      // memegang `linkedTransactionId` — bukan objek `entry` di atas.
+      let savedEntry = entry;
+      let linkedTransaction: Transaction | undefined;
+
       if (data.createTransaction && data.walletId) {
         // Build LinkedTransactionInput and call Transaction_Integrator atomically
         const transactionData: LinkedTransactionInput = {
@@ -79,18 +84,20 @@ export const useLoanEntryStore = create<LoanEntryState & LoanEntryActions>((set,
           amount: data.amount,
           note: data.note,
         };
-        await createLoanEntryWithTransaction(db, entry, transactionData);
+        const result = await createLoanEntryWithTransaction(db, entry, transactionData);
+        savedEntry = result.savedEntry;
+        linkedTransaction = result.linkedTransaction;
       } else {
         // No transaction integration — save entry directly
         await loanEntryDb.addEntry(db, entry);
       }
 
       set((state) => ({
-        entries: [...state.entries, entry],
+        entries: [...state.entries, savedEntry],
         isLoading: false,
       }));
 
-      if (data.createTransaction && data.walletId) {
+      if (linkedTransaction) {
         const { useWalletStore } = await import('./walletStore');
         const { useTransactionStore } = await import('./transactionStore');
         await Promise.all([
@@ -100,7 +107,13 @@ export const useLoanEntryStore = create<LoanEntryState & LoanEntryActions>((set,
       }
 
       if (useSyncStore.getState().syncKey) {
-        onLocalChange('loan_entries', entry);
+        onLocalChange('loan_entries', savedEntry);
+        // Transaksi linked ditulis dalam IDBTransaction yang sama, jadi harus
+        // ikut ter-publish — kalau tidak, device lain menerima loan entry-nya
+        // saja dan saldo wallet-nya jadi tidak cocok.
+        if (linkedTransaction) {
+          onLocalChange('transactions', linkedTransaction);
+        }
       }
     } catch (error) {
       const message = (error as Error).message;
@@ -150,7 +163,8 @@ export const useLoanEntryStore = create<LoanEntryState & LoanEntryActions>((set,
       // Use cascade delete to also remove all related Repayments and Linked_Transactions atomically
       // Requirements: 2.7, 6.3
       const deletedEntry = get().entries.find((e) => e.id === id);
-      await deleteLoanEntryWithCascade(db, id);
+      const { deletedRepaymentIds, deletedTransactionIds } =
+        await deleteLoanEntryWithCascade(db, id);
       set((state) => ({
         entries: state.entries.filter((e) => e.id !== id),
         isLoading: false,
@@ -159,7 +173,7 @@ export const useLoanEntryStore = create<LoanEntryState & LoanEntryActions>((set,
       // Reload repayments to keep state in sync after cascade delete
       // Lazy import to avoid circular dependency (loanRepaymentStore imports loanEntryStore)
       const { useLoanRepaymentStore } = await import('./loanRepaymentStore');
-      useLoanRepaymentStore.getState().loadRepayments();
+      await useLoanRepaymentStore.getState().loadRepayments();
 
       // Reload wallets and transactions if the deleted entry had a linked transaction
       if (deletedEntry?.linkedTransactionId) {
@@ -172,6 +186,15 @@ export const useLoanEntryStore = create<LoanEntryState & LoanEntryActions>((set,
       }
 
       if (useSyncStore.getState().syncKey) {
+        // Cascade delete juga menghapus semua repayment dan transaksi linked-nya.
+        // Tombstone-nya harus ikut di-publish, kalau tidak device lain menyimpan
+        // repayment yatim yang loan entry-nya sudah tidak ada.
+        for (const repaymentId of deletedRepaymentIds) {
+          onLocalChange('loan_repayments', { id: repaymentId, _deleted: true });
+        }
+        for (const transactionId of deletedTransactionIds) {
+          onLocalChange('transactions', { id: transactionId, _deleted: true });
+        }
         onLocalChange('loan_entries', { id, _deleted: true });
       }
     } catch (error) {

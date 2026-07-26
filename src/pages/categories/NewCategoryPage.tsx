@@ -44,7 +44,8 @@ const TYPE_OPTIONS: { value: CategoryType; label: string; icon: React.ReactNode;
 export default function NewCategoryPage() {
   const stickyHeader = useStickyHeader();
   const navigate = useNavigate();
-  const { addCategory, categories } = useCategoryStore();
+  const addCategory = useCategoryStore((s) => s.addCategory);
+  const categories = useCategoryStore((s) => s.categories);
 
   const form = useForm<CategoryInput>({
     resolver: zodResolver(categorySchema),

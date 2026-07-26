@@ -15,7 +15,7 @@ import { useStickyHeader } from "@/hooks/useStickyHeader";
 export default function ReportsPage() {
   const stickyHeader = useStickyHeader();
   const navigate = useNavigate();
-  const { error: txError } = useTransactionStore();
+  const txError = useTransactionStore((s) => s.error);
   const { entries } = useLoanEntries();
   const { repayments } = useLoanRepayments();
 

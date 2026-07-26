@@ -35,6 +35,12 @@ export function resolveTransactionType(
  * 3. Simpan LoanEntry dengan linkedTransactionId yang sudah diset
  * 4. Simpan Linked_Transaction ke object store `transactions`
  * 5. Update saldo Wallet secara atomik (income: +amount, expense: -amount)
+ * 6. Return { savedEntry, linkedTransaction }
+ *
+ * `savedEntry` adalah entry yang BENAR-BENAR tersimpan — `linkedTransactionId`-nya
+ * di-generate di dalam fungsi ini, jadi objek `entry` milik caller tidak
+ * memilikinya. Caller wajib memakai nilai yang dikembalikan, bukan input-nya,
+ * kalau tidak `linkedTransactionId` akan hilang dari state maupun jalur sync.
  *
  * Requirements: 2.3, 2.4, 2.6, 6.1
  */
@@ -42,7 +48,7 @@ export async function createLoanEntryWithTransaction(
   db: IDBDatabase,
   entry: LoanEntry,
   transactionData: LinkedTransactionInput
-): Promise<void> {
+): Promise<{ savedEntry: LoanEntry; linkedTransaction: Transaction }> {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(['loan_entries', 'transactions', 'wallets'], 'readwrite');
     tx.onerror = () => reject(tx.error);
@@ -101,7 +107,7 @@ export async function createLoanEntryWithTransaction(
           tx.abort();
         };
 
-        tx.oncomplete = () => resolve();
+        tx.oncomplete = () => resolve({ savedEntry: entryToSave, linkedTransaction });
       } catch (err) {
         try { tx.abort(); } catch { /* already aborted */ }
         reject(err);
@@ -131,12 +137,16 @@ export async function createLoanEntryWithTransaction(
  *    - Hapus Transaction
  * 6. Hapus LoanEntry
  *
+ * Mengembalikan id semua Repayment dan Transaction yang ikut terhapus supaya
+ * caller bisa mem-publish tombstone-nya ke Yjs — tanpa itu device lain akan
+ * menyimpan repayment yatim setelah loan entry-nya dihapus di sini.
+ *
  * Requirements: 2.7, 6.3
  */
 export async function deleteLoanEntryWithCascade(
   db: IDBDatabase,
   entryId: string
-): Promise<void> {
+): Promise<{ deletedRepaymentIds: string[]; deletedTransactionIds: string[] }> {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(
       ['loan_entries', 'loan_repayments', 'transactions', 'wallets'],
@@ -197,10 +207,13 @@ export async function deleteLoanEntryWithCascade(
           req.onerror = () => rej(req.error);
         });
 
+        const deletedTransactionIds: string[] = [];
+
         // 3. For each Repayment with a linkedTransactionId: reverse wallet balance and delete transaction
         for (const repayment of repayments) {
           if (repayment.linkedTransactionId) {
             await reverseWalletBalance(repayment.linkedTransactionId);
+            deletedTransactionIds.push(repayment.linkedTransactionId);
           }
         }
 
@@ -212,12 +225,17 @@ export async function deleteLoanEntryWithCascade(
         // 5. If LoanEntry has a linkedTransactionId: reverse wallet balance and delete transaction
         if (entry && entry.linkedTransactionId) {
           await reverseWalletBalance(entry.linkedTransactionId);
+          deletedTransactionIds.push(entry.linkedTransactionId);
         }
 
         // 6. Delete the LoanEntry
         loanEntriesStore.delete(entryId);
 
-        tx.oncomplete = () => resolve();
+        tx.oncomplete = () =>
+          resolve({
+            deletedRepaymentIds: repayments.map((r) => r.id),
+            deletedTransactionIds,
+          });
       } catch (err) {
         try { tx.abort(); } catch { /* already aborted */ }
         reject(err);
@@ -245,7 +263,11 @@ export async function deleteLoanEntryWithCascade(
  * 4. Fetch semua repayments untuk loanEntry ini dan hitung total yang sudah dibayar
  * 5. Auto-settle: jika total repaid == loanEntry.amount, ubah status ke 'settled' dan set settledAt
  * 6. Update loanEntry.remainingAmount = loanEntry.amount - totalRepaid
- * 7. Return { autoSettled: boolean }
+ * 7. Return { autoSettled, savedRepayment, updatedEntry, linkedTransaction }
+ *
+ * `savedRepayment`, `updatedEntry`, dan `linkedTransaction` dikembalikan supaya
+ * caller bisa mem-publish seluruh efek operasi ini ke Yjs. Tanpa itu jalur sync
+ * hanya melihat sebagian perubahan dan device lain jadi tidak konsisten.
  *
  * Requirements: 1.5, 1.6, 3.3, 3.5, 6.2
  */
@@ -254,7 +276,12 @@ export async function createRepaymentWithTransaction(
   repayment: Repayment,
   loanEntry: LoanEntry,
   transactionData?: LinkedTransactionInput
-): Promise<{ autoSettled: boolean }> {
+): Promise<{
+  autoSettled: boolean;
+  savedRepayment: Repayment;
+  updatedEntry: LoanEntry;
+  linkedTransaction?: Transaction;
+}> {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(
       ['loan_repayments', 'loan_entries', 'transactions', 'wallets'],
@@ -270,6 +297,10 @@ export async function createRepaymentWithTransaction(
         const transactionsStore = tx.objectStore('transactions');
         const walletsStore = tx.objectStore('wallets');
 
+        // Apa saja yang benar-benar tersimpan — dikembalikan ke caller untuk sync
+        let savedRepayment: Repayment = { ...repayment };
+        let savedLinkedTransaction: Transaction | undefined;
+
         if (transactionData) {
           // 1. Determine transaction type based on loanEntry direction
           const txType = resolveTransactionType('repayment', loanEntry.direction);
@@ -278,10 +309,8 @@ export async function createRepaymentWithTransaction(
           const linkedTransactionId = crypto.randomUUID();
 
           // 3. Save Repayment with linkedTransactionId set
-          loanRepaymentsStore.add({
-            ...repayment,
-            linkedTransactionId,
-          });
+          savedRepayment = { ...repayment, linkedTransactionId };
+          loanRepaymentsStore.add(savedRepayment);
 
           // 4. Build and save the Linked_Transaction
           const now = localISOString();
@@ -299,6 +328,7 @@ export async function createRepaymentWithTransaction(
             updatedAt: now,
           };
           transactionsStore.add(linkedTransaction);
+          savedLinkedTransaction = linkedTransaction;
 
           // 5. Update wallet balance atomically
           const delta = txType === 'income' ? transactionData.amount : -transactionData.amount;
@@ -320,7 +350,7 @@ export async function createRepaymentWithTransaction(
           });
         } else {
           // No transaction data — save Repayment without linkedTransactionId
-          loanRepaymentsStore.add({ ...repayment });
+          loanRepaymentsStore.add(savedRepayment);
         }
 
         // 6. Fetch all repayments for this loanEntry to calculate total repaid
@@ -348,7 +378,13 @@ export async function createRepaymentWithTransaction(
         };
         loanEntriesStore.put(updatedEntry);
 
-        tx.oncomplete = () => resolve({ autoSettled: autoSettled && loanEntry.status !== 'settled' });
+        tx.oncomplete = () =>
+          resolve({
+            autoSettled: autoSettled && loanEntry.status !== 'settled',
+            savedRepayment,
+            updatedEntry,
+            linkedTransaction: savedLinkedTransaction,
+          });
       } catch (err) {
         try { tx.abort(); } catch { /* already aborted */ }
         reject(err);
@@ -376,7 +412,10 @@ export async function createRepaymentWithTransaction(
  * 6. Update loanEntry.remainingAmount = loanEntry.amount - newTotalRepaid
  * 7. Auto-unsettle: jika loanEntry.status === 'settled' DAN newTotalRepaid < loanEntry.amount,
  *    ubah status kembali ke 'active' dan hapus settledAt
- * 8. Return { autoUnsettled: boolean }
+ * 8. Return { autoUnsettled, updatedEntry, deletedTransactionId }
+ *
+ * `updatedEntry` dan `deletedTransactionId` dikembalikan supaya caller bisa
+ * mem-publish seluruh efek operasi ini ke Yjs (lihat createRepaymentWithTransaction).
  *
  * Requirements: 1.8, 3.6, 6.2
  */
@@ -384,7 +423,11 @@ export async function deleteRepaymentWithCascade(
   db: IDBDatabase,
   repaymentId: string,
   loanEntry: LoanEntry
-): Promise<{ autoUnsettled: boolean }> {
+): Promise<{
+  autoUnsettled: boolean;
+  updatedEntry: LoanEntry;
+  deletedTransactionId?: string;
+}> {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(
       ['loan_repayments', 'loan_entries', 'transactions', 'wallets'],
@@ -474,7 +517,12 @@ export async function deleteRepaymentWithCascade(
         };
         loanEntriesStore.put(updatedEntry);
 
-        tx.oncomplete = () => resolve({ autoUnsettled });
+        tx.oncomplete = () =>
+          resolve({
+            autoUnsettled,
+            updatedEntry,
+            deletedTransactionId: repayment.linkedTransactionId,
+          });
       } catch (err) {
         try { tx.abort(); } catch { /* already aborted */ }
         reject(err);

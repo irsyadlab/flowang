@@ -19,7 +19,8 @@ interface ContactComboboxProps {
 }
 
 export default function ContactCombobox({ value, onChange, disabled, error }: ContactComboboxProps) {
-  const { contacts, addContactAndGetId } = useLoanContactStore();
+  const contacts = useLoanContactStore((s) => s.contacts);
+  const addContactAndGetId = useLoanContactStore((s) => s.addContactAndGetId);
 
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');

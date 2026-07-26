@@ -4,10 +4,36 @@ import { closeDB, getDB } from "../../src/db/db";
 import { useLoanEntryStore } from "../../src/stores/loanEntryStore";
 import { useUIStore } from "../../src/stores/uiStore";
 import { resetDB } from "../helpers/dbHelpers";
-import type { LoanEntry } from "../../src/types";
+import * as loanEntryDb from "../../src/db/loanEntryDb";
+import * as walletDb from "../../src/db/walletDb";
+import type { LoanEntry, Wallet } from "../../src/types";
 
 function resetStores() {
   useLoanEntryStore.setState({ entries: [], isLoading: false, error: null });
+}
+
+function getAllRecords<T>(db: IDBDatabase, storeName: string): Promise<T[]> {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, "readonly");
+    const request = tx.objectStore(storeName).getAll();
+    request.onsuccess = () => resolve(request.result as T[]);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+/** Wallet dibutuhkan integrator untuk menulis transaksi linked. */
+async function seedWallet(): Promise<Wallet> {
+  const now = new Date().toISOString();
+  const wallet: Wallet = {
+    id: crypto.randomUUID(),
+    name: "Dompet Test",
+    initialBalance: 1_000_000,
+    balance: 1_000_000,
+    createdAt: now,
+    updatedAt: now,
+  };
+  await walletDb.addWallet(getDB()!, wallet);
+  return wallet;
 }
 
 function makeEntry(overrides: Partial<LoanEntry> = {}): LoanEntry {
@@ -92,6 +118,69 @@ describe("loanEntryStore", () => {
         createTransaction: false,
       });
       expect(useLoanEntryStore.getState().entries.length).toBe(0);
+    });
+
+    /**
+     * Regression: `linkedTransactionId` di-generate di dalam
+     * createLoanEntryWithTransaction, jadi objek entry milik store tidak
+     * memilikinya. Dulu store menyimpan objek input-nya ke state, sehingga
+     * entry di memori kehilangan `linkedTransactionId` — dan `updateEntry`
+     * berikutnya menulis `undefined` itu ke IndexedDB, meng-orphan transaksi
+     * linked-nya secara permanen.
+     */
+    it("menyimpan linkedTransactionId ke state saat createTransaction aktif", async () => {
+      const db = getDB()!;
+      const wallet = await seedWallet();
+
+      await useLoanEntryStore.getState().addEntry({
+        contactId: crypto.randomUUID(),
+        amount: 50000,
+        direction: "borrow",
+        date: "2025-01-20",
+        createTransaction: true,
+        walletId: wallet.id,
+      });
+
+      const stateEntry = useLoanEntryStore.getState().entries[0];
+      expect(stateEntry.linkedTransactionId).toBeDefined();
+
+      // Harus menunjuk ke transaksi yang benar-benar dibuat
+      const transactions = await getAllRecords<{ id: string }>(db, "transactions");
+      expect(transactions.map((t) => t.id)).toContain(stateEntry.linkedTransactionId!);
+
+      // Dan harus cocok dengan yang tersimpan di IndexedDB
+      const stored = await loanEntryDb.getEntryById(db, stateEntry.id);
+      expect(stored!.linkedTransactionId).toBe(stateEntry.linkedTransactionId!);
+    });
+
+    it("updateEntry berikutnya tidak menghilangkan linkedTransactionId", async () => {
+      const db = getDB()!;
+      const wallet = await seedWallet();
+
+      await useLoanEntryStore.getState().addEntry({
+        contactId: crypto.randomUUID(),
+        amount: 50000,
+        direction: "borrow",
+        date: "2025-01-20",
+        createTransaction: true,
+        walletId: wallet.id,
+      });
+
+      const entryId = useLoanEntryStore.getState().entries[0].id;
+
+      // Nilai harapan diambil dari IndexedDB, BUKAN dari state store — state
+      // itulah yang sedang diuji. Kalau harapannya dibaca dari state yang rusak,
+      // assertion-nya jadi `undefined === undefined` dan bug-nya lolos.
+      const linkedId = (await loanEntryDb.getEntryById(db, entryId))!.linkedTransactionId;
+      expect(linkedId).toBeDefined();
+
+      // updateEntry membangun objek baru dari state in-memory — kalau state-nya
+      // kehilangan linkedTransactionId, tautan ke transaksi ikut terhapus di DB.
+      await useLoanEntryStore.getState().updateEntry(entryId, { note: "diubah" });
+
+      const stored = await loanEntryDb.getEntryById(db, entryId);
+      expect(stored!.note).toBe("diubah");
+      expect(stored!.linkedTransactionId).toBe(linkedId!);
     });
   });
 

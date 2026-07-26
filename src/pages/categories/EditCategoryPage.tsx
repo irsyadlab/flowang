@@ -47,7 +47,8 @@ export default function EditCategoryPage() {
   const stickyHeader = useStickyHeader();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { categories, updateCategory } = useCategoryStore();
+  const categories = useCategoryStore((s) => s.categories);
+  const updateCategory = useCategoryStore((s) => s.updateCategory);
 
   const category = categories.find((c) => c.id === id);
 

@@ -2,10 +2,12 @@ import { useMemo } from "react";
 import { useTransactionStore } from "@/stores/transactionStore";
 import TransactionItem from "@/components/transactions/TransactionItem";
 import EmptyState from "@/components/shared/EmptyState";
+import VirtualList from "@/components/shared/VirtualList";
 import { Receipt } from "lucide-react";
 
 export default function TransactionList() {
-  const { transactions, filter } = useTransactionStore();
+  const transactions = useTransactionStore((s) => s.transactions);
+  const filter = useTransactionStore((s) => s.filter);
 
   const filtered = useMemo(() => {
     let result = transactions;
@@ -46,11 +48,16 @@ export default function TransactionList() {
   return (
     <div className="space-y-2">
       <p className="text-xs text-muted-foreground font-medium">{filtered.length} transaksi</p>
-      <div className="flex flex-col gap-2 stagger-children">
-        {filtered.map((t) => (
-          <TransactionItem key={t.id} transaction={t} />
-        ))}
-      </div>
+      {/* Halaman ini biasanya dibatasi filter satu hari, jadi hampir selalu
+          dirender biasa (lengkap dengan animasi). Windowing baru aktif kalau
+          user melebarkan rentang tanggalnya. */}
+      <VirtualList
+        items={filtered}
+        getKey={(t) => t.id}
+        plainClassName="flex flex-col gap-2 stagger-children"
+      >
+        {(t) => <TransactionItem transaction={t} />}
+      </VirtualList>
     </div>
   );
 }

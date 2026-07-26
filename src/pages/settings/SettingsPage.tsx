@@ -30,6 +30,7 @@ import ThemeCard from '@/components/settings/ThemeCard';
 import OfflineBanner from '@/components/settings/OfflineBanner';
 import ConfirmDialog from '@/components/shared/ConfirmDialog';
 import { generateSyncKey, encodeSyncKey } from '@/sync/syncKeyUtils';
+import { SYNCED_STORES, syncedStoreNames } from '@/sync/syncedStores';
 import { usePeerCount } from '@/hooks/usePeerCount';
 import { usePeerDevices } from '@/hooks/usePeerDevices';
 import PeerDevicesDialog from '@/components/settings/PeerDevicesDialog';
@@ -107,12 +108,11 @@ export default function SettingsPage() {
       if (!db) throw new Error('Database not initialized');
 
       // Clear semua object stores di flowang-db
-      const stores = ['transactions', 'wallets', 'categories', 'loan_contacts', 'loan_entries', 'loan_repayments'];
       await new Promise<void>((resolve, reject) => {
-        const tx = db.transaction(stores, 'readwrite');
+        const tx = db.transaction(syncedStoreNames(), 'readwrite');
         tx.oncomplete = () => resolve();
         tx.onerror = () => reject(tx.error);
-        stores.forEach((store) => tx.objectStore(store).clear());
+        SYNCED_STORES.forEach((store) => tx.objectStore(store).clear());
       });
 
       // Clear yjs-sync IndexedDB (Yjs CRDT state) supaya data lama

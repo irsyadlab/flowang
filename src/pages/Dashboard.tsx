@@ -1,7 +1,5 @@
 import { useNavigate } from "react-router-dom";
 import { Plus } from "lucide-react";
-import { useWalletStore } from "@/stores/walletStore";
-import { useTransactionStore } from "@/stores/transactionStore";
 import SummaryCard from "@/components/dashboard/SummaryCard";
 import WalletList from "@/components/dashboard/WalletList";
 import RecentTransactions from "@/components/dashboard/RecentTransactions";
@@ -11,8 +9,10 @@ import { useStickyHeader } from "@/hooks/useStickyHeader";
 export default function Dashboard() {
   const stickyHeader = useStickyHeader();
   const navigate = useNavigate();
-  useWalletStore();
-  useTransactionStore();
+  // Tidak berlangganan store di sini: SummaryCard, WalletList, dan
+  // RecentTransactions masing-masing sudah mengambil potongan state yang
+  // dibutuhkannya sendiri. Berlangganan di level halaman hanya membuat seluruh
+  // subtree ini ikut re-render setiap kali `isLoading` berkedip.
   const { isHidden, setIsHidden } = useBalanceVisibility();
 
   return (

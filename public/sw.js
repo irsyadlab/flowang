@@ -14,7 +14,20 @@ const PRECACHE_URLS = [
 // ── Install: pre-cache shell ──────────────────────────────────────────────────
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
+    caches.open(CACHE_NAME).then((cache) =>
+      // Sengaja TIDAK memakai cache.addAll: addAll bersifat atomik, jadi satu
+      // URL yang gagal membatalkan seluruh precache dan service worker tidak
+      // pernah ter-install. Sejak route di-code-split daftar ini berisi puluhan
+      // chunk, dan satu kegagalan sementara tidak boleh menjatuhkan semuanya.
+      // Chunk yang terlewat tetap akan ter-cache saat pertama kali diminta.
+      Promise.all(
+        PRECACHE_URLS.map((url) =>
+          cache.add(url).catch(() => {
+            // Non-fatal — biarkan install tetap berhasil
+          })
+        )
+      )
+    )
   );
   // Activate immediately without waiting for old tabs to close
   self.skipWaiting();

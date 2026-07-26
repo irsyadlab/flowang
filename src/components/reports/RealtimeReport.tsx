@@ -87,7 +87,7 @@ function CustomTooltip({ active, payload }: { active?: boolean; payload?: Toolti
 
 export default function RealtimeReport() {
   const rawTransactions = useTransactionStore((s) => s.transactions);
-  const { categories } = useCategoryStore();
+  const categories = useCategoryStore((s) => s.categories);
 
   const { dateFrom, dateTo, monthLabel } = useMemo(() => {
     const now = new Date();

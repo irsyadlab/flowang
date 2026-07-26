@@ -7,6 +7,7 @@ import { getEnvConfig } from '../lib/envConfig';
 import { importKeyFromBase64, encrypt, decrypt } from './cryptoService';
 import { decodeSyncKey } from './syncKeyUtils';
 import { getDB } from '../db/db';
+import { SYNCED_STORES, type SyncedStoreName } from './syncedStores';
 
 const BACKUP_FILENAME = 'flowang-backup.enc';
 const DRIVE_API_BASE = 'https://www.googleapis.com/drive/v3';
@@ -123,6 +124,19 @@ function getOrCreateTokenClient(): GisTokenClient {
  *   stored credentials. Pass true only from explicit user actions (login, backup,
  *   restore) so the popup never fires automatically.
  */
+/**
+ * Kegagalan pada tahap autentikasi — bukan kegagalan jaringan.
+ *
+ * Dibedakan supaya tidak ikut di-retry: mengulang permintaan token berarti
+ * membuka pop-up Google lagi, padahal user baru saja menutupnya.
+ */
+class AuthError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'AuthError';
+  }
+}
+
 async function ensureValidToken(allowPopup = false): Promise<string> {
   const state = useSyncStore.getState();
   const { googleAuthToken, googleTokenExpiry } = state;
@@ -137,13 +151,13 @@ async function ensureValidToken(allowPopup = false): Promise<string> {
     // Do NOT clear stored credentials — user info is still valid, only the
     // access token needs refreshing. The UI will trigger a silent refresh
     // when the sheet is opened.
-    throw new Error('TOKEN_EXPIRED');
+    throw new AuthError('TOKEN_EXPIRED');
   }
 
   // Need to refresh — request a new token
   return new Promise<string>((resolve, reject) => {
     tokenRefreshResolve = resolve;
-    tokenRefreshReject = reject;
+    tokenRefreshReject = (err) => reject(new AuthError(err.message));
 
     try {
       const client = getOrCreateTokenClient();
@@ -152,7 +166,7 @@ async function ensureValidToken(allowPopup = false): Promise<string> {
     } catch (err) {
       tokenRefreshResolve = null;
       tokenRefreshReject = null;
-      reject(err);
+      reject(new AuthError((err as Error).message));
     }
   });
 }
@@ -171,13 +185,11 @@ interface DriveFilesResponse {
   files: DriveFile[];
 }
 
-interface SerializedData {
-  wallets: Record<string, unknown>[];
-  transactions: Record<string, unknown>[];
-  categories: Record<string, unknown>[];
-  loan_contacts: Record<string, unknown>[];
-  loan_entries: Record<string, unknown>[];
-}
+/**
+ * Isi file backup. Kunci-kuncinya diturunkan dari SYNCED_STORES supaya store
+ * baru otomatis ikut ter-backup begitu didaftarkan di registry.
+ */
+type SerializedData = Record<SyncedStoreName, Record<string, unknown>[]>;
 
 interface GoogleUserInfoResponse {
   name?: string;
@@ -240,19 +252,14 @@ async function deleteFile(fileId: string, token: string): Promise<void> {
   });
 }
 
-async function serializeIndexedDB(): Promise<Uint8Array> {
+/** Exported untuk test — bukan bagian dari API publik provider. */
+export async function serializeIndexedDB(): Promise<Uint8Array> {
   const db = getDB();
   if (!db) throw new Error('Database tidak tersedia');
 
-  const data: SerializedData = {
-    wallets: [],
-    transactions: [],
-    categories: [],
-    loan_contacts: [],
-    loan_entries: [],
-  };
+  const data = {} as SerializedData;
 
-  for (const storeName of ['wallets', 'transactions', 'categories', 'loan_contacts', 'loan_entries'] as const) {
+  for (const storeName of SYNCED_STORES) {
     const records = await new Promise<Record<string, unknown>[]>((resolve, reject) => {
       const tx = db.transaction(storeName, 'readonly');
       const store = tx.objectStore(storeName);
@@ -267,15 +274,23 @@ async function serializeIndexedDB(): Promise<Uint8Array> {
   return new TextEncoder().encode(json);
 }
 
-async function deserializeToIndexedDB(data: Uint8Array): Promise<void> {
+/** Exported untuk test — bukan bagian dari API publik provider. */
+export async function deserializeToIndexedDB(data: Uint8Array): Promise<void> {
   const db = getDB();
   if (!db) throw new Error('Database tidak tersedia');
 
   const json = new TextDecoder().decode(data);
-  const parsed = JSON.parse(json) as SerializedData;
+  const parsed = JSON.parse(json) as Partial<SerializedData>;
 
-  for (const [storeName, records] of Object.entries(parsed)) {
+  // Iterasi atas registry, bukan atas kunci yang ada di file backup. Backup lama
+  // (dibuat sebelum sebuah store didaftarkan) tidak memuat kunci tersebut, dan
+  // store-nya tetap harus dikosongkan — kalau tidak, data lokal yang tertinggal
+  // akan bercampur dengan hasil restore. Restore harus menghasilkan state yang
+  // persis sama dengan isi backup.
+  for (const storeName of SYNCED_STORES) {
     if (!db.objectStoreNames.contains(storeName)) continue;
+
+    const records = parsed[storeName] ?? [];
 
     const tx = db.transaction(storeName, 'readwrite');
     const store = tx.objectStore(storeName);
@@ -380,35 +395,86 @@ export function logout(): void {
   if (token) {
     fetch(`https://accounts.google.com/o/oauth2/revoke?token=${token}`).catch(() => {});
   }
+
+  // Batalkan backup yang masih menunggu — kalau tidak, timer-nya tetap menyala
+  // setelah user logout.
+  if (backupDebounceTimer) {
+    clearTimeout(backupDebounceTimer);
+    backupDebounceTimer = null;
+  }
+
   // Reset GIS token client so next login starts fresh
   tokenClient = null;
   useSyncStore.getState().setGoogleAuth(null, null);
 }
 
+/** Apakah user memang sudah menghubungkan Google Drive. */
+function isDriveConnected(): boolean {
+  return useSyncStore.getState().googleAuthToken !== null;
+}
+
+/**
+ * Jadwalkan backup otomatis setelah data berubah.
+ *
+ * Tidak melakukan apa-apa selama Google Drive belum dihubungkan. Sebelumnya
+ * penjadwalan berjalan tanpa syarat, sehingga user yang tidak pernah menyentuh
+ * fitur backup pun tetap ditodong pop-up login Google 30 detik setelah mencatat
+ * transaksi pertamanya.
+ */
 export function scheduleBackup(): void {
   if (backupDebounceTimer) clearTimeout(backupDebounceTimer);
+  backupDebounceTimer = null;
+
+  if (!isDriveConnected()) return;
+
   backupDebounceTimer = setTimeout(() => {
-    performBackup().catch(() => {});
+    performBackup({ interactive: false }).catch(() => {});
   }, 30_000);
 }
 
+/**
+ * Apakah ada backup otomatis yang sedang menunggu jadwal.
+ * Dipakai test — jendela debounce-nya 30 detik, terlalu lama untuk ditunggu.
+ */
+export function hasPendingBackup(): boolean {
+  return backupDebounceTimer !== null;
+}
+
+/** Backup yang dipicu user lewat tombol — boleh meminta login bila perlu. */
 export async function backupNow(): Promise<void> {
   if (backupDebounceTimer) {
     clearTimeout(backupDebounceTimer);
     backupDebounceTimer = null;
   }
-  await performBackup();
+  await performBackup({ interactive: true });
 }
 
-async function performBackup(): Promise<void> {
+interface BackupOptions {
+  /**
+   * true hanya untuk aksi yang benar-benar dimulai user.
+   *
+   * Menentukan dua hal: boleh tidaknya membuka pop-up OAuth, dan apakah
+   * kegagalan dilempar ke pemanggil (untuk ditampilkan sebagai toast) atau
+   * cukup dicatat diam-diam.
+   */
+  interactive: boolean;
+}
+
+async function performBackup({ interactive }: BackupOptions): Promise<void> {
   const syncKey = useSyncStore.getState().syncKey;
   if (!syncKey) return;
+
+  // Jalur otomatis berhenti di sini kalau Drive belum terhubung. Pengecekan
+  // ganda dengan scheduleBackup memang disengaja: performBackup juga bisa
+  // terpanggil dari timer yang sudah terlanjur berjalan saat user logout.
+  if (!interactive && !isDriveConnected()) return;
 
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt < RETRY_COUNT; attempt++) {
     try {
-      const token = await ensureValidToken(true);
+      // Pop-up OAuth hanya boleh muncul dari aksi user.
+      const token = await ensureValidToken(interactive);
       const jsonBytes = await serializeIndexedDB();
       // Use decodeSyncKey consistently (same as restore)
       const decoded = decodeSyncKey(syncKey);
@@ -429,15 +495,34 @@ async function performBackup(): Promise<void> {
       return;
     } catch (error) {
       lastError = error as Error;
+
+      // Kegagalan autentikasi tidak pernah di-retry.
+      //
+      // Di latar belakang: token kedaluwarsa bukan kegagalan yang perlu
+      // dilaporkan — UI sudah punya silent refresh saat sheet Drive dibuka.
+      //
+      // Pada aksi user: mencoba ulang berarti membuka pop-up Google lagi,
+      // padahal user baru saja menutupnya. Retry hanya masuk akal untuk
+      // kegagalan jaringan atau API.
+      if (lastError instanceof AuthError) {
+        if (!interactive) return;
+        break;
+      }
+
       if (attempt < RETRY_COUNT - 1) {
         await new Promise((r) => setTimeout(r, RETRY_INTERVAL));
       }
     }
   }
 
-  useSyncStore.getState().setSyncError(
-    `Backup gagal: ${lastError?.message || 'Unknown error'}`
-  );
+  const reason = lastError?.message || 'Unknown error';
+
+  // Backup yang diminta user harus melempar, supaya pemanggil tidak terlanjur
+  // menampilkan notifikasi berhasil padahal gagal. Pesannya sengaja tanpa
+  // awalan "Backup gagal" — pemanggil yang menambahkannya.
+  if (interactive) throw new Error(reason);
+
+  useSyncStore.getState().setSyncError(`Backup gagal: ${reason}`);
 }
 
 export async function checkRestore(): Promise<boolean> {
@@ -449,8 +534,10 @@ export async function checkRestore(): Promise<boolean> {
     const db = getDB();
     if (!db) return false;
 
+    // Hitung SEMUA store yang di-sync: user yang datanya hanya utang-piutang
+    // tetap harus dianggap "sudah punya data" dan tidak ditawari restore.
     const counts = await Promise.all(
-      ['wallets', 'transactions', 'categories'].map((storeName) => {
+      SYNCED_STORES.map((storeName) => {
         return new Promise<number>((resolve) => {
           const tx = db.transaction(storeName, 'readonly');
           const store = tx.objectStore(storeName);
@@ -523,6 +610,7 @@ export async function restoreWithKey(syncKey: string): Promise<void> {
     const { useCategoryStore } = await import('../stores/categoryStore');
     const { useLoanContactStore } = await import('../stores/loanContactStore');
     const { useLoanEntryStore } = await import('../stores/loanEntryStore');
+    const { useLoanRepaymentStore } = await import('../stores/loanRepaymentStore');
 
     await Promise.all([
       useWalletStore.getState().loadWallets(),
@@ -530,6 +618,7 @@ export async function restoreWithKey(syncKey: string): Promise<void> {
       useCategoryStore.getState().loadCategories(),
       useLoanContactStore.getState().loadContacts(),
       useLoanEntryStore.getState().loadEntries(),
+      useLoanRepaymentStore.getState().loadRepayments(),
     ]);
   } catch (error) {
     const msg = (error as Error).message ?? '';

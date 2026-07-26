@@ -1,58 +1,143 @@
+/**
+ * Definisi route.
+ *
+ * Semua route kecuali shell (AppLayout) dan Dashboard di-code-split lewat
+ * properti `lazy` milik data router. Tujuannya menjauhkan dependency berat dari
+ * critical path pemuatan awal:
+ *
+ *   - recharts      → hanya dipakai halaman Reports
+ *   - html5-qrcode  → hanya dipakai QR scanner di Settings
+ *
+ * Dashboard sengaja TIDAK di-lazy: dia route pendaratan paling umum, jadi
+ * memecahnya hanya menambah satu round-trip di jalur yang paling sering dilewati.
+ *
+ * Chunk yang belum ter-load ikut di-precache service worker saat install
+ * (lihat post-process sw.js di build.ts), jadi offline-first tetap terjaga —
+ * splitting menunda *parse & eksekusi*, bukan ketersediaan offline.
+ *
+ * Kegagalan memuat chunk ditangani `errorElement` di root route.
+ */
+
+import { createBrowserRouter } from "react-router-dom";
 import AppLayout from "@/layouts/AppLayout";
 import Dashboard from "@/pages/Dashboard";
-import TransactionsPage from "@/pages/transactions/TransactionsPage";
-import NewTransactionPage from "@/pages/transactions/NewTransactionPage";
-import EditTransactionPage from "@/pages/transactions/EditTransactionPage";
-import ReportsPage from "@/pages/reports/ReportsPage";
-import MonthlyDetailPage from "@/pages/reports/MonthlyDetailPage";
-import MorePage from "@/pages/more/MorePage";
-import WalletsPage from "@/pages/wallets/WalletsPage";
-import NewWalletPage from "@/pages/wallets/NewWalletPage";
-import EditWalletPage from "@/pages/wallets/EditWalletPage";
-import WalletDetailPage from "@/pages/wallets/WalletDetailPage";
-import CategoriesPage from "@/pages/categories/CategoriesPage";
-import NewCategoryPage from "@/pages/categories/NewCategoryPage";
-import EditCategoryPage from "@/pages/categories/EditCategoryPage";
-import SettingsPage from "@/pages/settings/SettingsPage";
-import ContactListPage from "@/pages/loans/ContactListPage";
-import LoanDetailPage from "@/pages/loans/LoanDetailPage";
-import NewLoanPage from "@/pages/loans/NewLoanPage";
-import EditLoanPage from "@/pages/loans/EditLoanPage";
-import HelpPage from "@/pages/more/HelpPage";
-import PrivacyPolicyPage from "@/pages/privacy-policy/PrivacyPolicyPage";
-import AboutPage from "@/pages/more/AboutPage";
-import FeedbackPage from "@/pages/more/FeedbackPage";
-import { createBrowserRouter } from "react-router-dom";
+import RouteErrorBoundary from "@/components/shared/RouteErrorBoundary";
 
 export const router = createBrowserRouter([
   {
     path: "/",
     element: <AppLayout />,
+    errorElement: <RouteErrorBoundary />,
     children: [
       { index: true, element: <Dashboard /> },
-      { path: "transactions", element: <TransactionsPage /> },
-      { path: "transactions/new", element: <NewTransactionPage /> },
-      { path: "transactions/:id", element: <EditTransactionPage /> },
-      { path: "reports", element: <ReportsPage /> },
-      { path: "reports/monthly/:year/:month", element: <MonthlyDetailPage /> },
-      { path: "more", element: <MorePage /> },
-      { path: "wallets", element: <WalletsPage /> },
-      { path: "wallets/new", element: <NewWalletPage /> },
-      { path: "wallets/:id", element: <EditWalletPage /> },
-      { path: "wallets/:id/detail", element: <WalletDetailPage /> },
-      { path: "categories", element: <CategoriesPage /> },
-      { path: "categories/new", element: <NewCategoryPage /> },
-      { path: "categories/:id", element: <EditCategoryPage /> },
-      { path: "settings", element: <SettingsPage /> },
-      { path: "loans", element: <ContactListPage /> },
-      { path: "loans/new", element: <NewLoanPage /> },
-      { path: "loans/:contactId", element: <LoanDetailPage /> },
-      { path: "loans/:contactId/new", element: <NewLoanPage /> },
-      { path: "loans/:contactId/:entryId", element: <EditLoanPage /> },
-      { path: "privacy-policy", element: <PrivacyPolicyPage /> },
-      { path: "help", element: <HelpPage /> },
-      { path: "about", element: <AboutPage /> },
-      { path: "feedback", element: <FeedbackPage /> },
+
+      // Transactions
+      {
+        path: "transactions",
+        lazy: async () => ({ Component: (await import("@/pages/transactions/TransactionsPage")).default }),
+      },
+      {
+        path: "transactions/new",
+        lazy: async () => ({ Component: (await import("@/pages/transactions/NewTransactionPage")).default }),
+      },
+      {
+        path: "transactions/:id",
+        lazy: async () => ({ Component: (await import("@/pages/transactions/EditTransactionPage")).default }),
+      },
+
+      // Reports — pembawa recharts
+      {
+        path: "reports",
+        lazy: async () => ({ Component: (await import("@/pages/reports/ReportsPage")).default }),
+      },
+      {
+        path: "reports/monthly/:year/:month",
+        lazy: async () => ({ Component: (await import("@/pages/reports/MonthlyDetailPage")).default }),
+      },
+
+      // More
+      {
+        path: "more",
+        lazy: async () => ({ Component: (await import("@/pages/more/MorePage")).default }),
+      },
+
+      // Wallets
+      {
+        path: "wallets",
+        lazy: async () => ({ Component: (await import("@/pages/wallets/WalletsPage")).default }),
+      },
+      {
+        path: "wallets/new",
+        lazy: async () => ({ Component: (await import("@/pages/wallets/NewWalletPage")).default }),
+      },
+      {
+        path: "wallets/:id",
+        lazy: async () => ({ Component: (await import("@/pages/wallets/EditWalletPage")).default }),
+      },
+      {
+        path: "wallets/:id/detail",
+        lazy: async () => ({ Component: (await import("@/pages/wallets/WalletDetailPage")).default }),
+      },
+
+      // Categories
+      {
+        path: "categories",
+        lazy: async () => ({ Component: (await import("@/pages/categories/CategoriesPage")).default }),
+      },
+      {
+        path: "categories/new",
+        lazy: async () => ({ Component: (await import("@/pages/categories/NewCategoryPage")).default }),
+      },
+      {
+        path: "categories/:id",
+        lazy: async () => ({ Component: (await import("@/pages/categories/EditCategoryPage")).default }),
+      },
+
+      // Settings — pembawa html5-qrcode
+      {
+        path: "settings",
+        lazy: async () => ({ Component: (await import("@/pages/settings/SettingsPage")).default }),
+      },
+
+      // Loans
+      {
+        path: "loans",
+        lazy: async () => ({ Component: (await import("@/pages/loans/ContactListPage")).default }),
+      },
+      {
+        path: "loans/new",
+        lazy: async () => ({ Component: (await import("@/pages/loans/NewLoanPage")).default }),
+      },
+      {
+        path: "loans/:contactId",
+        lazy: async () => ({ Component: (await import("@/pages/loans/LoanDetailPage")).default }),
+      },
+      {
+        path: "loans/:contactId/new",
+        lazy: async () => ({ Component: (await import("@/pages/loans/NewLoanPage")).default }),
+      },
+      {
+        path: "loans/:contactId/:entryId",
+        lazy: async () => ({ Component: (await import("@/pages/loans/EditLoanPage")).default }),
+      },
+
+      // Halaman statis
+      {
+        path: "privacy-policy",
+        lazy: async () => ({ Component: (await import("@/pages/privacy-policy/PrivacyPolicyPage")).default }),
+      },
+      {
+        path: "help",
+        lazy: async () => ({ Component: (await import("@/pages/more/HelpPage")).default }),
+      },
+      {
+        path: "about",
+        lazy: async () => ({ Component: (await import("@/pages/more/AboutPage")).default }),
+      },
+      {
+        path: "feedback",
+        lazy: async () => ({ Component: (await import("@/pages/more/FeedbackPage")).default }),
+      },
     ],
   },
 ]);

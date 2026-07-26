@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useLoanRepaymentStore } from '../stores/loanRepaymentStore';
 
 export function useLoanRepayments() {
@@ -9,7 +10,16 @@ export function useLoanRepayments() {
     loadRepayments,
     addRepayment,
     deleteRepayment,
-  } = useLoanRepaymentStore();
+  } = useLoanRepaymentStore(
+    useShallow((s) => ({
+      repayments: s.repayments,
+      isLoading: s.isLoading,
+      error: s.error,
+      loadRepayments: s.loadRepayments,
+      addRepayment: s.addRepayment,
+      deleteRepayment: s.deleteRepayment,
+    })),
+  );
 
   const getRepaymentsByLoanEntryId = useMemo(() => {
     return (loanEntryId: string) => {

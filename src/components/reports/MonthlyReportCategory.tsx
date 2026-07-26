@@ -69,7 +69,7 @@ interface Props {
 
 export default function MonthlyReportCategory({ dateFrom, dateTo }: Props) {
   const rawTransactions = useTransactionStore((s) => s.transactions);
-  const { categories } = useCategoryStore();
+  const categories = useCategoryStore((s) => s.categories);
 
   const transactions = useMemo(
     () => filterByDateRange(rawTransactions, dateFrom, dateTo),

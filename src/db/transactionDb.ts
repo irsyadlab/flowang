@@ -35,6 +35,35 @@ export async function getTransactionById(db: IDBDatabase, id: string): Promise<T
   return requestToPromise(request);
 }
 
+/**
+ * Upsert satu transaksi apa adanya, TANPA menyentuh saldo wallet.
+ *
+ * Khusus untuk jalur sync: `addTransaction`/`updateTransaction` sekaligus
+ * menerapkan delta ke saldo wallet, dan itu keliru untuk data yang datang dari
+ * device lain — saldo di sana dihitung ulang dari keseluruhan riwayat setelah
+ * semua transaksi masuk (lihat `lib/walletBalance`).
+ */
+export async function putTransactionRecord(db: IDBDatabase, transaction: Transaction): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('transactions', 'readwrite');
+    const request = tx.objectStore('transactions').put(transaction);
+    request.onsuccess = () => resolve();
+    request.onerror = () =>
+      reject(new Error(`Put transaction failed: ${request.error?.message || 'Unknown error'}`));
+  });
+}
+
+/** Hapus satu transaksi apa adanya, TANPA membalik saldo wallet (jalur sync). */
+export async function deleteTransactionRecord(db: IDBDatabase, id: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('transactions', 'readwrite');
+    const request = tx.objectStore('transactions').delete(id);
+    request.onsuccess = () => resolve();
+    request.onerror = () =>
+      reject(new Error(`Delete transaction failed: ${request.error?.message || 'Unknown error'}`));
+  });
+}
+
 // Get transactions by wallet ID
 export async function getTransactionsByWalletId(db: IDBDatabase, walletId: string): Promise<Transaction[]> {
   const tx = db.transaction('transactions', 'readonly');

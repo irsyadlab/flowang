@@ -192,18 +192,21 @@ export function disconnect(): void {
 /**
  * Broadcast all local IndexedDB data to Yjs CRDT when a new peer joins.
  * This ensures new devices get the full dataset, not just incremental changes.
+ *
+ * Daftar store diambil dari SYNCED_STORES — sebelumnya di-hardcode di sini dan
+ * melewatkan `loan_repayments`, sehingga device yang baru bergabung tidak pernah
+ * menerima riwayat pelunasan lewat broadcast awal.
  */
 async function broadcastAllLocalData(): Promise<void> {
   if (!ydoc) return;
 
   try {
     const { getDB } = await import('../db/db');
+    const { SYNCED_STORES } = await import('./syncedStores');
     const db = getDB();
     if (!db) return;
 
-    const storeNames = ['wallets', 'transactions', 'categories', 'loan_contacts', 'loan_entries'] as const;
-    
-    for (const storeName of storeNames) {
+    for (const storeName of SYNCED_STORES) {
       if (!db.objectStoreNames.contains(storeName)) continue;
 
       const records = await new Promise<Record<string, unknown>[]>((resolve, reject) => {
@@ -216,12 +219,42 @@ async function broadcastAllLocalData(): Promise<void> {
 
       const map = ydoc.getMap(storeName);
       for (const record of records) {
-        if (record.id) {
-          map.set(record.id as string, record);
-        }
+        if (!record.id) continue;
+
+        // Lewati record yang isinya sudah identik di Yjs. `map.set` selalu
+        // dihitung sebagai perubahan meski nilainya sama, jadi tanpa penjagaan
+        // ini setiap peer yang bergabung akan memicu badai event observer di
+        // SEMUA device — dan setiap device menulis ulang seluruh datanya ke
+        // IndexedDB tanpa ada yang benar-benar berubah.
+        const existing = map.get(record.id as string);
+        if (existing !== undefined && isSameRecord(existing, record)) continue;
+
+        map.set(record.id as string, record);
       }
     }
   } catch (error) {
     console.warn('Failed to broadcast local data:', error);
   }
+}
+
+/**
+ * Perbandingan isi dua record hasil JSON round-trip.
+ *
+ * Nilai di Yjs berasal dari serialisasi, jadi tipenya selalu tipe JSON polos —
+ * cukup dibandingkan lewat JSON dengan kunci terurut supaya beda urutan properti
+ * tidak dianggap perubahan.
+ */
+function isSameRecord(a: unknown, b: unknown): boolean {
+  return stableStringify(a) === stableStringify(b);
+}
+
+function stableStringify(value: unknown): string {
+  return JSON.stringify(value, (_key, val) => {
+    if (val && typeof val === 'object' && !Array.isArray(val)) {
+      return Object.fromEntries(
+        Object.entries(val as Record<string, unknown>).sort(([x], [y]) => x.localeCompare(y)),
+      );
+    }
+    return val;
+  });
 }

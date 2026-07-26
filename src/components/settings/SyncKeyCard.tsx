@@ -2,11 +2,18 @@
  * SyncKeyCard - QR Code display, key text with toggle, copy, reset, and scan.
  */
 
-import { useState } from 'react';
+import { Suspense, lazy, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useSync } from '@/hooks/useSync';
 import ConfirmDialog from '@/components/shared/ConfirmDialog';
-import QRScanner from './QRScanner';
+import LoadingSpinner from '@/components/shared/LoadingSpinner';
+
+/**
+ * QRScanner membawa html5-qrcode, dan hanya dipakai saat user menekan tombol
+ * scan. Di-lazy-load supaya library kamera tidak ikut terunduh oleh mayoritas
+ * user yang tidak pernah memakai pairing lewat QR.
+ */
+const QRScanner = lazy(() => import('./QRScanner'));
 
 export default function SyncKeyCard({ onConnected }: { onConnected?: () => void }) {
   const { syncKey, resetSyncKey } = useSync();
@@ -82,7 +89,15 @@ export default function SyncKeyCard({ onConnected }: { onConnected?: () => void 
       />
 
       {showScanner && (
-        <QRScanner onClose={() => setShowScanner(false)} onSuccess={onConnected} />
+        <Suspense
+          fallback={
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95">
+              <LoadingSpinner />
+            </div>
+          }
+        >
+          <QRScanner onClose={() => setShowScanner(false)} onSuccess={onConnected} />
+        </Suspense>
       )}
     </div>
   );

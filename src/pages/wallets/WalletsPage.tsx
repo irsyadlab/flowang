@@ -9,7 +9,7 @@ import { useStickyHeader } from "@/hooks/useStickyHeader";
 export default function WalletsPage() {
   const stickyHeader = useStickyHeader();
   const navigate = useNavigate();
-  const { wallets } = useWalletStore();
+  const wallets = useWalletStore((s) => s.wallets);
   const { isHidden, setIsHidden } = useBalanceVisibility();
 
   return (

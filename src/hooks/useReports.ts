@@ -9,7 +9,8 @@ import {
 } from '../lib/reportEngine';
 
 export function useReports() {
-  const { transactions, filter } = useTransactionStore();
+  const transactions = useTransactionStore((s) => s.transactions);
+  const filter = useTransactionStore((s) => s.filter);
 
   // Get filtered transactions based on current filter
   const filteredTransactions = useMemo(() => {

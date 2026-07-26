@@ -15,6 +15,7 @@ import { initialize as initSync } from "./sync/syncManager";
 import { useTheme } from "./hooks/useTheme";
 import { Toaster } from "./components/ui/sonner";
 import AppLoadingScreen from "./components/shared/AppLoadingScreen";
+import ErrorBoundary from "./components/shared/ErrorBoundary";
 import "../styles/globals.css";
 
 export function App() {
@@ -67,11 +68,11 @@ export function App() {
   }, [setDbReady, setDbError, setAppReady]);
 
   return (
-    <>
+    <ErrorBoundary>
       {!appReady && <AppLoadingScreen />}
       <RouterProvider router={router} />
       <Toaster position="top-center" richColors />
-    </>
+    </ErrorBoundary>
   );
 }
 

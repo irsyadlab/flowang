@@ -92,6 +92,25 @@ export async function addRepayment(db: IDBDatabase, repayment: Repayment): Promi
   });
 }
 
+/**
+ * Upsert sebuah repayment tanpa validasi relasi.
+ *
+ * Dipakai jalur sync untuk menulis repayment yang datang dari device lain:
+ * `addRepayment` memakai `store.add` (gagal kalau id sudah ada) dan memvalidasi
+ * `categoryId`, sementara data remote bisa tiba sebelum kategorinya ter-sync.
+ * Perilakunya sengaja dibuat sama dengan `loanEntryDb.updateEntry`.
+ */
+export async function putRepayment(db: IDBDatabase, repayment: Repayment): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('loan_repayments', 'readwrite');
+    const store = tx.objectStore('loan_repayments');
+    const request = store.put(repayment);
+    request.onsuccess = () => resolve();
+    request.onerror = () =>
+      reject(new Error(`Put repayment failed: ${request.error?.message || 'Unknown error'}`));
+  });
+}
+
 // Delete a repayment by ID
 export async function deleteRepayment(db: IDBDatabase, id: string): Promise<void> {
   return new Promise((resolve, reject) => {

@@ -10,7 +10,9 @@ import type { TransactionInput } from "@/lib/validators";
 export default function EditTransactionPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { transactions, updateTransaction, deleteTransaction } = useTransactionStore();
+  const transactions = useTransactionStore((s) => s.transactions);
+  const updateTransaction = useTransactionStore((s) => s.updateTransaction);
+  const deleteTransaction = useTransactionStore((s) => s.deleteTransaction);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const transaction = transactions.find((t) => t.id === id);

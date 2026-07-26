@@ -30,7 +30,8 @@ export default function CategoryCombobox({
   disabled,
   placeholder = 'Pilih kategori',
 }: CategoryComboboxProps) {
-  const { categories, addCategory } = useCategoryStore();
+  const categories = useCategoryStore((s) => s.categories);
+  const addCategory = useCategoryStore((s) => s.addCategory);
 
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');

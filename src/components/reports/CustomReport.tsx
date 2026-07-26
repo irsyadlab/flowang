@@ -75,7 +75,7 @@ function formatDateLabel(dateStr: string) {
 
 export default function CustomReport() {
   const rawTransactions = useTransactionStore((s) => s.transactions);
-  const { categories } = useCategoryStore();
+  const categories = useCategoryStore((s) => s.categories);
 
   const today = (() => {
     const n = new Date();

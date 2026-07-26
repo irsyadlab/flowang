@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useLoanContactStore } from '../stores/loanContactStore';
 import { useLoanEntryStore } from '../stores/loanEntryStore';
 import type { ContactSummary } from '../types';
@@ -13,9 +14,19 @@ export function useLoanContacts() {
     addContact,
     updateContact,
     deleteContact,
-  } = useLoanContactStore();
+  } = useLoanContactStore(
+    useShallow((s) => ({
+      contacts: s.contacts,
+      isLoading: s.isLoading,
+      error: s.error,
+      loadContacts: s.loadContacts,
+      addContact: s.addContact,
+      updateContact: s.updateContact,
+      deleteContact: s.deleteContact,
+    })),
+  );
 
-  const { entries } = useLoanEntryStore();
+  const entries = useLoanEntryStore((s) => s.entries);
 
   const summaries = useMemo(() => {
     const map = new Map<string, ContactSummary>();

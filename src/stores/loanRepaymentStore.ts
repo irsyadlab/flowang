@@ -11,6 +11,8 @@ import { getDB } from '../db/db';
 import { useUIStore } from './uiStore';
 import { useLoanEntryStore } from './loanEntryStore';
 import { localISOString } from '../lib/utils';
+import { useSyncStore } from '../sync/syncStore';
+import { onLocalChange } from '../sync/syncManager';
 
 interface LoanRepaymentState {
   repayments: Repayment[];
@@ -95,15 +97,14 @@ export const useLoanRepaymentStore = create<LoanRepaymentState & LoanRepaymentAc
           };
         }
 
-        const { autoSettled } = await createRepaymentWithTransaction(
-          db,
-          repayment,
-          loanEntry,
-          transactionData
-        );
+        const { savedRepayment, updatedEntry, linkedTransaction } =
+          await createRepaymentWithTransaction(db, repayment, loanEntry, transactionData);
 
         set((state) => ({
-          repayments: [...state.repayments, repayment],
+          // savedRepayment, bukan `repayment` — integrator yang mengisi
+          // linkedTransactionId, dan state in-memory harus mencerminkan
+          // apa yang benar-benar tersimpan di IndexedDB.
+          repayments: [...state.repayments, savedRepayment],
           isLoading: false,
         }));
 
@@ -117,9 +118,21 @@ export const useLoanRepaymentStore = create<LoanRepaymentState & LoanRepaymentAc
           ]);
         }
 
-        // If the loan entry was auto-settled, reload entries from DB to reflect updated status
-        if (autoSettled) {
-          await useLoanEntryStore.getState().loadEntries();
+        // Reload entries dari DB: remainingAmount selalu berubah setelah
+        // repayment, bukan hanya saat auto-settle.
+        await useLoanEntryStore.getState().loadEntries();
+
+        // Publish SEMUA efek operasi ini. Repayment, transaksi linked, dan
+        // loan entry yang ter-update ditulis dalam satu IDBTransaction, jadi
+        // ketiganya harus ikut ter-sync bersama — kalau hanya sebagian yang
+        // di-publish, device lain melihat state yang tidak konsisten (mis.
+        // sisa hutang berubah tanpa riwayat pelunasan).
+        if (useSyncStore.getState().syncKey) {
+          onLocalChange('loan_repayments', savedRepayment);
+          if (linkedTransaction) {
+            onLocalChange('transactions', linkedTransaction);
+          }
+          onLocalChange('loan_entries', updatedEntry);
         }
       } catch (error) {
         const message = (error as Error).message;
@@ -142,7 +155,8 @@ export const useLoanRepaymentStore = create<LoanRepaymentState & LoanRepaymentAc
         if (!db) throw new Error('Database not initialized');
 
         const deletedRepayment = get().repayments.find((r) => r.id === id);
-        const { autoUnsettled } = await deleteRepaymentWithCascade(db, id, loanEntry);
+        const { updatedEntry, deletedTransactionId } =
+          await deleteRepaymentWithCascade(db, id, loanEntry);
 
         set((state) => ({
           repayments: state.repayments.filter((r) => r.id !== id),
@@ -159,9 +173,17 @@ export const useLoanRepaymentStore = create<LoanRepaymentState & LoanRepaymentAc
           ]);
         }
 
-        // If the loan entry was auto-unsettled, reload entries from DB to reflect updated status
-        if (autoUnsettled) {
-          await useLoanEntryStore.getState().loadEntries();
+        // Reload entries dari DB: remainingAmount selalu berubah setelah
+        // repayment dihapus, bukan hanya saat auto-unsettle.
+        await useLoanEntryStore.getState().loadEntries();
+
+        // Publish semua efek operasi (lihat catatan di addRepayment)
+        if (useSyncStore.getState().syncKey) {
+          onLocalChange('loan_repayments', { id, _deleted: true });
+          if (deletedTransactionId) {
+            onLocalChange('transactions', { id: deletedTransactionId, _deleted: true });
+          }
+          onLocalChange('loan_entries', updatedEntry);
         }
       } catch (error) {
         const message = (error as Error).message;

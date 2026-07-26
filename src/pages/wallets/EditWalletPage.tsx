@@ -31,7 +31,8 @@ export default function EditWalletPage() {
   const stickyHeader = useStickyHeader();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { wallets, updateWallet } = useWalletStore();
+  const wallets = useWalletStore((s) => s.wallets);
+  const updateWallet = useWalletStore((s) => s.updateWallet);
 
   const wallet = wallets.find((w) => w.id === id);
   const walletIndex = wallets.findIndex((w) => w.id === id);

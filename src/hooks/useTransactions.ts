@@ -1,3 +1,4 @@
+import { useShallow } from 'zustand/react/shallow';
 import { useTransactionStore } from '../stores/transactionStore';
 
 export function useTransactions() {
@@ -12,7 +13,20 @@ export function useTransactions() {
     deleteTransaction,
     setFilter,
     clearFilter,
-  } = useTransactionStore();
+  } = useTransactionStore(
+    useShallow((s) => ({
+      transactions: s.transactions,
+      isLoading: s.isLoading,
+      error: s.error,
+      filter: s.filter,
+      loadTransactions: s.loadTransactions,
+      addTransaction: s.addTransaction,
+      updateTransaction: s.updateTransaction,
+      deleteTransaction: s.deleteTransaction,
+      setFilter: s.setFilter,
+      clearFilter: s.clearFilter,
+    })),
+  );
 
   return {
     // Data

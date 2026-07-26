@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useLoanEntryStore } from '../stores/loanEntryStore';
 import { computeContactSummary, getNetBalanceLabel, sortEntriesByDate } from '../lib/loanUtils';
 
@@ -13,7 +14,19 @@ export function useLoanEntries() {
     deleteEntry,
     toggleEntryStatus,
     markAllSettled,
-  } = useLoanEntryStore();
+  } = useLoanEntryStore(
+    useShallow((s) => ({
+      entries: s.entries,
+      isLoading: s.isLoading,
+      error: s.error,
+      loadEntries: s.loadEntries,
+      addEntry: s.addEntry,
+      updateEntry: s.updateEntry,
+      deleteEntry: s.deleteEntry,
+      toggleEntryStatus: s.toggleEntryStatus,
+      markAllSettled: s.markAllSettled,
+    })),
+  );
 
   const sortedEntries = useMemo(() => sortEntriesByDate(entries), [entries]);
 

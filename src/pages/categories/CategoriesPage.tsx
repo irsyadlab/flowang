@@ -8,7 +8,7 @@ import { useStickyHeader } from "@/hooks/useStickyHeader";
 export default function CategoriesPage() {
   const stickyHeader = useStickyHeader();
   const navigate = useNavigate();
-  const { categories } = useCategoryStore();
+  const categories = useCategoryStore((s) => s.categories);
 
   const incomeCategories = categories.filter((c) => c.type === "income" || c.type === "both");
   const expenseCategories = categories.filter((c) => c.type === "expense" || c.type === "both");
